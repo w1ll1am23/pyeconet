@@ -1,5 +1,4 @@
 import logging
-import datetime
 import json
 
 import requests
@@ -10,6 +9,7 @@ BASE_URL = "https://econet-api.rheemcert.com"
 LOCATION_URL = BASE_URL + "/locations"
 DEVICE_URL = BASE_URL + "/equipment/%s"
 MODES_URL = DEVICE_URL + "/modes"
+USAGE_URL = DEVICE_URL + "/usage"
 HEADERS = {"Authorization": "Bearer %s", "Content-Type": "application/json"}
 BASIC_HEADERS = {"Authorization": "Basic Y29tLnJoZWVtLmVjb25ldF9hcGk6c3RhYmxla2VybmVs"}
 USERNAME = None
@@ -39,7 +39,8 @@ class EcoNetApiInterface(object):
         # get a token
         self.authenticated = self._authenticate()
 
-    def set_state(self, _id, body):
+    @staticmethod
+    def set_state(_id, body):
         """
         Set a devices state.
         """
@@ -50,8 +51,8 @@ class EcoNetApiInterface(object):
             _LOGGER.error("State not accepted. " + status_code)
             return False
 
-
-    def get_modes(self, _id):
+    @staticmethod
+    def get_modes(_id):
         """
         Pull a water heater's modes from the API.
         """
@@ -63,7 +64,21 @@ class EcoNetApiInterface(object):
             return False
         return arequest.json()
 
-    def get_device(self, _id):
+    @staticmethod
+    def get_usage(_id):
+        """
+        Pull a water heater's usage report from the API.
+        """
+        url = USAGE_URL % _id
+        arequest = requests.get(url, headers=HEADERS)
+        status_code = str(arequest.status_code)
+        if status_code == '401':
+            _LOGGER.error("Token expired.")
+            return False
+        return arequest.json()
+
+    @staticmethod
+    def get_device(_id):
         """
         Pull a device from the API.
         """
@@ -74,8 +89,9 @@ class EcoNetApiInterface(object):
             _LOGGER.error("Token expired.")
             return False
         return arequest.json()
-        
-    def get_locations(self):
+
+    @staticmethod
+    def get_locations():
         """
         Pull the accounts locations.
         """
@@ -86,7 +102,7 @@ class EcoNetApiInterface(object):
             return False
         return arequest.json()
 
-    def _authenticate(self, reauth=False):
+    def _authenticate(self):
         """
         Authenticate with the API and return an authentication token.
         """
@@ -100,7 +116,7 @@ class EcoNetApiInterface(object):
         response = arequest.json()
         _LOGGER.debug(str(response))
         self.token = response.get("access_token")
-        self.refresh_token = response.get("refresh_token") 
+        self.refresh_token = response.get("refresh_token")
         _auth = HEADERS.get("Authorization")
         _auth = _auth % self.token
         HEADERS["Authorization"] = _auth
@@ -108,6 +124,7 @@ class EcoNetApiInterface(object):
         return True
 
 
+# pylint: disable=too-few-public-methods
 class PyEcoNet(object):
     """
     Object used to interact with this library.
@@ -115,10 +132,8 @@ class PyEcoNet(object):
 
     def __init__(self, username, password):
         self.api_interface = EcoNetApiInterface(username, password)
-        if not self.api_interface.authenticated:
-            return False
+        self.connected = self.api_interface.authenticated
         self.locations = self.api_interface.get_locations()
-
 
     def get_water_heaters(self):
         """
@@ -128,12 +143,11 @@ class PyEcoNet(object):
         """
         water_heaters = []
         for location in self.locations:
-            location_name = location.get("name")
-            loation_id = location.get("id")
             for device in location.get("equipment"):
-                 if device.get("type") == "Water Heater":
-                     water_heater_modes = self.api_interface.get_modes(device.get("id"))
-                     water_heater = self.api_interface.get_device(device.get("id"))
-                     water_heaters.append(EcoNetWaterHeater(water_heater, water_heater_modes, self.api_interface))
+                if device.get("type") == "Water Heater":
+                    water_heater_modes = self.api_interface.get_modes(device.get("id"))
+                    water_heater_usage = self.api_interface.get_usage(device.get("id"))
+                    water_heater = self.api_interface.get_device(device.get("id"))
+                    water_heaters.append(EcoNetWaterHeater(water_heater, water_heater_modes, water_heater_usage,
+                                                           self.api_interface))
         return water_heaters
-     
