@@ -3,13 +3,15 @@ import json
 
 import requests
 
-from pyeconet.devices.water_heater import EcoNetWaterHeater
+from pyeconet.equipment.water_heater import EcoNetWaterHeater
+from pyeconet.vacation import EcoNetVacation
 
 BASE_URL = "https://econet-api.rheemcert.com"
-LOCATION_URL = BASE_URL + "/locations"
+LOCATIONS_URL = BASE_URL + "/locations"
 DEVICE_URL = BASE_URL + "/equipment/%s"
 MODES_URL = DEVICE_URL + "/modes"
 USAGE_URL = DEVICE_URL + "/usage"
+VACATIONS_URL = BASE_URL + "/vacations"
 HEADERS = {"Authorization": "Bearer %s", "Content-Type": "application/json"}
 BASIC_HEADERS = {"Authorization": "Basic Y29tLnJoZWVtLmVjb25ldF9hcGk6c3RhYmxla2VybmVs"}
 USERNAME = None
@@ -95,12 +97,49 @@ class EcoNetApiInterface(object):
         """
         Pull the accounts locations.
         """
-        arequest = requests.get(LOCATION_URL, headers=HEADERS)
+        arequest = requests.get(LOCATIONS_URL, headers=HEADERS)
         status_code = str(arequest.status_code)
         if status_code == '401':
             _LOGGER.error("Token expired.")
             return False
         return arequest.json()
+
+    @staticmethod
+    def get_vacations():
+        """
+        Pull the accounts vacations.
+        """
+        arequest = requests.get(VACATIONS_URL, headers=HEADERS)
+        status_code = str(arequest.status_code)
+        if status_code == '401':
+            _LOGGER.error("Token expired.")
+            return False
+        return arequest.json()
+
+    @staticmethod
+    def create_vacation(body):
+        """
+        Create a vacation.
+        """
+        arequest = requests.post(VACATIONS_URL, headers=HEADERS, data=json.dumps(body))
+        status_code = str(arequest.status_code)
+        if status_code != '200':
+            _LOGGER.error("Failed to create vacation. " + status_code)
+            _LOGGER.error(arequest.json())
+            return False
+        return arequest.json()
+
+    @staticmethod
+    def delete_vacation(_id):
+        """
+        Delete a vacation by ID.
+        """
+        arequest = requests.delete(VACATIONS_URL + "/" + _id, headers=HEADERS)
+        status_code = str(arequest.status_code)
+        if status_code != '202':
+            _LOGGER.error("Failed to delete vacation. " + status_code)
+            return False
+        return True
 
     def _authenticate(self):
         """
@@ -143,11 +182,20 @@ class PyEcoNet(object):
         """
         water_heaters = []
         for location in self.locations:
+            _location_id = location.get("id")
             for device in location.get("equipment"):
                 if device.get("type") == "Water Heater":
                     water_heater_modes = self.api_interface.get_modes(device.get("id"))
                     water_heater_usage = self.api_interface.get_usage(device.get("id"))
                     water_heater = self.api_interface.get_device(device.get("id"))
+                    vacations = self.api_interface.get_vacations()
+                    device_vacations = []
+                    for vacation in vacations:
+                        for equipment in vacation.get("participatingEquipment"):
+                            if equipment.get("id") == water_heater.get("id"):
+                                device_vacations.append(EcoNetVacation(vacation, self.api_interface))
                     water_heaters.append(EcoNetWaterHeater(water_heater, water_heater_modes, water_heater_usage,
+                                                           _location_id,
+                                                           device_vacations,
                                                            self.api_interface))
         return water_heaters
