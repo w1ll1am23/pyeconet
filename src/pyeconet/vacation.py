@@ -11,7 +11,6 @@ _LOGGER = logging.getLogger(__name__)
 class EcoNetVacation(object):
     """
     Represents an EcoNet vacation.
-    This is a combination of three API endpoints.
     """
 
     def __init__(self, vacation_as_json, api_interface):
@@ -28,7 +27,6 @@ class EcoNetVacation(object):
         utc_date = dateutil.parser.parse(date_string)
         local_tz = get_localzone()
         return utc_date.replace(tzinfo=timezone.utc).astimezone(local_tz)
-
 
     @property
     def end_date(self):
