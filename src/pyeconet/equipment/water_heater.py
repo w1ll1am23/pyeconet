@@ -1,5 +1,6 @@
 import logging
 import json
+import time
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class EcoNetWaterHeater(object):
         self._modes = []
         self.location_id = location_id
         self.vacations = vacations
+        self._last_update = time.time()
         for mode in device_modes_as_json:
             self._modes.append(mode.get("name"))
 
@@ -47,7 +49,7 @@ class EcoNetWaterHeater(object):
 
     @property
     def is_on_vacation(self):
-        return self.json_state.get("isOnVaction")
+        return self.json_state.get("isOnVacation")
 
     @property
     def is_connected(self):
@@ -88,16 +90,24 @@ class EcoNetWaterHeater(object):
         return json.dumps(self._usage, indent=4, sort_keys=True)
 
     def update_state(self):
-        device_state = self.api_interface.get_device(self.id)
-        if device_state:
-            self.json_state = device_state
-        usage = self.api_interface.get_usage(self.id)
-        if usage:
-            self._usage = usage
+        now = time.time()
+        # Only call the API once to obtain all devices
+        if now - self._last_update > 300:
+            _LOGGER.info("Calling API to get updated state.")
+            device_state = self.api_interface.get_device(self.id)
+            if device_state:
+                _LOGGER.debug(device_state)
+                self.json_state = device_state
+            usage = self.api_interface.get_usage(self.id)
+            if usage:
+                _LOGGER.debug(usage)
+                self._usage = usage
+            self._last_update = now
 
     def set_target_set_point(self, temp):
         if self.min_set_point < temp < self.max_set_point:
             self.api_interface.set_state(self.id, {"setPoint": temp})
+            self._last_update = 0
         else:
             error = "Invalid set point. Must be < %s and > %s" % self.max_set_point, self.min_set_point
             _LOGGER.error(error)
@@ -112,11 +122,12 @@ class EcoNetWaterHeater(object):
         body = {"startDate": start_date_string, "endDate": end_date_string,
                 "location": { "id": _location_id },
                 "participatingEquipment": [{"id": _id}]}
-        print(body)
         self.api_interface.create_vacation(body)
+        self._last_update = 0
 
     def set_mode(self, mode):
         if mode in self._modes:
-            self.api_interface.set_state({"mode": mode})
+            self.api_interface.set_state(self.id, {"mode": mode})
+            self._last_update = 0
         else:
             _LOGGER.error("Invalid mode: " + str(mode))
