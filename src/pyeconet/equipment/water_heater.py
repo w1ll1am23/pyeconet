@@ -2,6 +2,8 @@ import logging
 import json
 import time
 
+from pyeconet.vacation import EcoNetVacation
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -102,6 +104,13 @@ class EcoNetWaterHeater(object):
             if usage:
                 _LOGGER.debug(usage)
                 self._usage = usage
+            vacations = self.api_interface.get_vacations()
+            if vacations:
+                self.vacations = []
+                for vacation in vacations:
+                    for equipment in vacation.get("participatingEquipment"):
+                        if equipment.get("id") == self.id:
+                            self.vacations.append(EcoNetVacation(vacation, self.api_interface))
             self._last_update = now
 
     def set_target_set_point(self, temp):

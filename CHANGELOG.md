@@ -1,5 +1,8 @@
 # Change log
 
+## 0.0.3
+- Pull vacations on water heater update
+
 ## 0.0.2
 - Fixed Vacation typo
 - Added device ID to set_state call in set_mode
