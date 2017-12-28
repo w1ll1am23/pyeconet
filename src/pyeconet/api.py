@@ -77,7 +77,11 @@ class EcoNetApiInterface(object):
         if status_code == '401':
             _LOGGER.error("Token expired.")
             return False
-        return arequest.json()
+        try:
+            return arequest.json()
+        except json.decoder.JSONDecodeError:
+            _LOGGER.info("Failed to get usage. Not supported by unit?")
+            return None
 
     @staticmethod
     def get_device(_id):

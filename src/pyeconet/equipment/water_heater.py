@@ -75,21 +75,26 @@ class EcoNetWaterHeater(object):
 
     @property
     def usage_unit(self):
-        return self._usage["energyUsage"]["unit"]
+        if self._usage:
+            return self._usage["energyUsage"]["unit"]
+        return None
 
     @property
     def total_usage_for_today(self):
-        hours = self._usage["energyUsage"]["hours"]
-        total = 0
-        for usage in hours.values():
-            total += usage
-        return total
+        if self._usage:
+            hours = self._usage["energyUsage"]["hours"]
+            total = 0
+            for usage in hours.values():
+                total += usage
+            return total
 
     def get_vacations(self):
         return self.vacations
 
     def dump_usage_json(self):
-        return json.dumps(self._usage, indent=4, sort_keys=True)
+        if self._usage:
+            return json.dumps(self._usage, indent=4, sort_keys=True)
+        return None
 
     def update_state(self):
         now = time.time()
