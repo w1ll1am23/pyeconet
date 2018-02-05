@@ -1,5 +1,8 @@
 # Change log
 
+## 0.0.5
+- Switch json.decoder.JSONDecodeError to ValueError
+
 ## 0.0.4
 - Natural gas water heaters don't support usage. Handle usage errors.
 

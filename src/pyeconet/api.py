@@ -79,7 +79,7 @@ class EcoNetApiInterface(object):
             return False
         try:
             return arequest.json()
-        except json.decoder.JSONDecodeError:
+        except ValueError:
             _LOGGER.info("Failed to get usage. Not supported by unit?")
             return None
 
