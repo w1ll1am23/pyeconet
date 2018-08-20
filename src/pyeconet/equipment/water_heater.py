@@ -2,7 +2,7 @@ import logging
 import json
 import time
 
-from pyeconet.vacation import EcoNetVacation
+from ..vacation import EcoNetVacation
 
 _LOGGER = logging.getLogger(__name__)
 

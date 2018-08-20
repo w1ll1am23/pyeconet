@@ -3,8 +3,8 @@ import json
 
 import requests
 
-from pyeconet.equipment.water_heater import EcoNetWaterHeater
-from pyeconet.vacation import EcoNetVacation
+from .equipment.water_heater import EcoNetWaterHeater
+from .vacation import EcoNetVacation
 
 BASE_URL = "https://econet-api.rheemcert.com"
 LOCATIONS_URL = BASE_URL + "/locations"
@@ -47,6 +47,8 @@ class EcoNetApiInterface(object):
         Set a devices state.
         """
         url = DEVICE_URL % _id
+        if "mode" in body:
+            url = MODES_URL % _id
         arequest = requests.put(url, headers=HEADERS, data=json.dumps(body))
         status_code = str(arequest.status_code)
         if status_code != '202':

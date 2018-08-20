@@ -1,5 +1,8 @@
 # Change log
 
+## 0.0.6
+- Modes are now sent to the modes endpoint not directly to the device endpoint
+
 ## 0.0.5
 - Switch json.decoder.JSONDecodeError to ValueError
 
