@@ -68,6 +68,18 @@ class EcoNetWaterHeater(object):
     @property
     def mode(self):
         return self.json_state.get("mode")
+    
+    @property
+    def upper_temp(self):
+        return self.json_state.get('upperTemp')
+
+    @property
+    def lower_temp(self):
+        return self.json_state.get('lowerTemp')
+
+    @property
+    def ambient_temp(self):
+        return self.json_state.get('ambientTemp')
 
     @property
     def supported_modes(self):
