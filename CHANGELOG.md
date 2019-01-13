@@ -1,5 +1,8 @@
 # Change log
 
+## 0.0.7
+- Fixed exception from energy usage and added more json attributes
+
 ## 0.0.6
 - Modes are now sent to the modes endpoint not directly to the device endpoint
 
