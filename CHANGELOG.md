@@ -1,5 +1,8 @@
 # Change log
 
+## 0.0.8
+- Fix set temp to include upper and lower limit
+
 ## 0.0.7
 - Fixed exception from energy usage and added more json attributes
 
