@@ -1,5 +1,8 @@
 # Change log
 
+## 0.0.9
+- Fix string formatting for python versions < 3.6
+
 ## 0.0.8
 - Fix set temp to include upper and lower limit
 
