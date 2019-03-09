@@ -1,5 +1,8 @@
 # Change log
 
+## 0.0.10
+- Actualy did what I said I did in 0.0.9
+
 ## 0.0.9
 - Fix string formatting for python versions < 3.6
 

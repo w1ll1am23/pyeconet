@@ -130,7 +130,7 @@ class EcoNetWaterHeater(object):
             self.api_interface.set_state(self.id, {"setPoint": temp})
             self._last_update = 0
         else:
-            error = f"Invalid set point. Must be <= {self.max_set_point} and => {self.min_set_point}"
+            error = "Invalid set point. Must be <= {} and => {}".format(self.max_set_point, self.min_set_point)
             _LOGGER.error(error)
 
     def set_vacation_mode(self, start_date, end_date):
