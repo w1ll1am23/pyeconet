@@ -96,6 +96,41 @@ class EcoNetWaterHeater(object):
             hours = self._usage['energyUsage'].get('hours', {})
             return sum((usage for usage in hours.values()))
 
+    @property
+    def total_usage_for_month(self):
+        if self._usage and self._usage.get('energyUsage'):
+            days = self._usage['energyUsage'].get('days', {})
+            return sum((usage for usage in days.values()))
+
+    @property
+    def total_usage_for_year(self):
+        if self._usage and self._usage.get('energyUsage'):
+            months = self._usage['energyUsage'].get('months', {})
+            return sum((usage for usage in months.values()))
+
+    @property
+    def waterusage_unit(self):
+        if self._usage and self._usage.get('waterUsage'):
+            return self._usage['waterUsage'].get('unit')
+
+    @property
+    def total_water_for_today(self):
+        if self._usage and self._usage.get('waterUsage'):
+            hours = self._usage['waterUsage'].get('hours', {})
+            return sum((usage for usage in hours.values()))
+
+    @property
+    def total_water_for_month(self):
+        if self._usage and self._usage.get('waterUsage'):
+            days = self._usage['waterUsage'].get('days', {})
+            return sum((usage for usage in days.values()))
+
+    @property
+    def total_water_for_year(self):
+        if self._usage and self._usage.get('waterUsage'):
+            months = self._usage['waterUsage'].get('months', {})
+            return sum((usage for usage in months.values()))
+
     def get_vacations(self):
         return self.vacations
 
