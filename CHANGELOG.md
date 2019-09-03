@@ -1,5 +1,8 @@
 # Change log
 
+## 0.0.11
+- Added water usage and usage reports for month and year
+
 ## 0.0.10
 - Actualy did what I said I did in 0.0.9
 
