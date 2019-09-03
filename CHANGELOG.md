@@ -1,7 +1,10 @@
 # Change log
 
-## 0.0.11
+## 0.0.12
 - Added water usage and usage reports for month and year
+
+## 0.0.11
+- Beta release
 
 ## 0.0.10
 - Actualy did what I said I did in 0.0.9
