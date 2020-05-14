@@ -1,207 +1,80 @@
-import logging
+import time
+import ssl
 import json
+from typing import Type, TypeVar
+import logging
+
+from pyeconet.errors import PyeconetError, InvalidCredentialsError, GenericHTTPError
 
 import requests
+import paho.mqtt.client as mqtt
 
-from .equipment.water_heater import EcoNetWaterHeater
-from .vacation import EcoNetVacation
 
-BASE_URL = "https://econet-api.rheemcert.com"
-LOCATIONS_URL = BASE_URL + "/locations"
-DEVICE_URL = BASE_URL + "/equipment/%s"
-MODES_URL = DEVICE_URL + "/modes"
-USAGE_URL = DEVICE_URL + "/usage"
-VACATIONS_URL = BASE_URL + "/vacations"
-HEADERS = {"Authorization": "Bearer %s", "Content-Type": "application/json"}
-BASIC_HEADERS = {"Authorization": "Basic Y29tLnJoZWVtLmVjb25ldF9hcGk6c3RhYmxla2VybmVs"}
-USERNAME = None
-PASSWORD = None
+HOST = "rheem.clearblade.com"
+REST_URL = f"https://{HOST}/api/v/1"
+CLEAR_BLADE_SYSTEM_KEY = "e2e699cb0bb0bbb88fc8858cb5a401"
+CLEAR_BLADE_SYSTEM_SECRET = "E2E699CB0BE6C6FADDB1B0BC9A20"
+HEADERS = {"ClearBlade-SystemKey": CLEAR_BLADE_SYSTEM_KEY, "ClearBlade-SystemSecret": CLEAR_BLADE_SYSTEM_SECRET,
+           "Content-Type": "application/json; charset=UTF-8"}
 
 _LOGGER = logging.getLogger(__name__)
 
+ApiType = TypeVar("ApiType", bound="EcoNetApiInterface")
 
-class EcoNetApiInterface(object):
+
+class EcoNetApiInterface:
     """
     API interface object.
     """
 
-    def __init__(self, email, password):
+    def __init__(self, email: str, password: str, account_id: str = None, user_token: str = None) -> None:
         """
         Create the EcoNet API interface object.
         Args:
             email (str): EcoNet account email address.
             password (str): EcoNet account password.
-        """
-        self.email = email
-        self.password = password
-        self.token = None
-        self.refresh_token = None
-        self.last_api_call = None
-        self.state = []
-        # get a token
-        self.authenticated = self._authenticate()
 
-    @staticmethod
-    def set_state(_id, body):
         """
-        Set a devices state.
-        """
-        url = DEVICE_URL % _id
-        if "mode" in body:
-            url = MODES_URL % _id
-        arequest = requests.put(url, headers=HEADERS, data=json.dumps(body))
-        status_code = str(arequest.status_code)
-        if status_code != '202':
-            _LOGGER.error("State not accepted. " + status_code)
-            return False
+        self.email: str = email
+        self.password: str = password
+        self._user_token: str = user_token
+        self._account_id: str = account_id
 
-    @staticmethod
-    def get_modes(_id):
-        """
-        Pull a water heater's modes from the API.
-        """
-        url = MODES_URL % _id
-        arequest = requests.get(url, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
-        return arequest.json()
+    @property
+    def user_token(self) -> str:
+        """Return the current user token"""
+        return self._user_token
 
-    @staticmethod
-    def get_usage(_id):
-        """
-        Pull a water heater's usage report from the API.
-        """
-        url = USAGE_URL % _id
-        arequest = requests.get(url, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
-        try:
-            return arequest.json()
-        except ValueError:
-            _LOGGER.info("Failed to get usage. Not supported by unit?")
-            return None
+    @property
+    def account_id(self) -> str:
+        """Return the current user token"""
+        return self._account_id
 
-    @staticmethod
-    def get_device(_id):
-        """
-        Pull a device from the API.
-        """
-        url = DEVICE_URL % _id
-        arequest = requests.get(url, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
-        return arequest.json()
+    @classmethod
+    async def login(cls: Type[ApiType],
+                    email: str,
+                    password: str) -> ApiType:
+        """Create an EcoNetApiInterface object using email and password
+        Args:
+            email (str): EcoNet account email address.
+            password (str): EcoNet account password.
 
-    @staticmethod
-    def get_locations():
         """
-        Pull the accounts locations.
-        """
-        arequest = requests.get(LOCATIONS_URL, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
-        return arequest.json()
+        this_class = cls(email, password)
+        await this_class._authenticate(
+            {"email": email, "password": password}
+        )
+        return this_class
 
-    @staticmethod
-    def get_vacations():
-        """
-        Pull the accounts vacations.
-        """
-        arequest = requests.get(VACATIONS_URL, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
-        return arequest.json()
-
-    @staticmethod
-    def create_vacation(body):
-        """
-        Create a vacation.
-        """
-        arequest = requests.post(VACATIONS_URL, headers=HEADERS, data=json.dumps(body))
-        status_code = str(arequest.status_code)
-        if status_code != '200':
-            _LOGGER.error("Failed to create vacation. " + status_code)
-            _LOGGER.error(arequest.json())
-            return False
-        return arequest.json()
-
-    @staticmethod
-    def delete_vacation(_id):
-        """
-        Delete a vacation by ID.
-        """
-        arequest = requests.delete(VACATIONS_URL + "/" + _id, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code != '202':
-            _LOGGER.error("Failed to delete vacation. " + status_code)
-            return False
-        return True
-
-    def _authenticate(self):
-        """
-        Authenticate with the API and return an authentication token.
-        """
-        auth_url = BASE_URL + "/auth/token"
-        payload = {'username': self.email, 'password': self.password, 'grant_type': 'password'}
-        arequest = requests.post(auth_url, data=payload, headers=BASIC_HEADERS)
-        status = arequest.status_code
-        if status != 200:
-            _LOGGER.error("Authentication request failed, please check credintials. " + str(status))
-            return False
-        response = arequest.json()
-        _LOGGER.debug(str(response))
-        self.token = response.get("access_token")
-        self.refresh_token = response.get("refresh_token")
-        _auth = HEADERS.get("Authorization")
-        _auth = _auth % self.token
-        HEADERS["Authorization"] = _auth
-        _LOGGER.info("Authentication was successful, token set.")
-        return True
-
-
-# pylint: disable=too-few-public-methods
-class PyEcoNet(object):
-    """
-    Object used to interact with this library.
-    """
-
-    def __init__(self, username, password):
-        self.api_interface = EcoNetApiInterface(username, password)
-        self.connected = self.api_interface.authenticated
-        self.locations = self.api_interface.get_locations()
-
-    def get_water_heaters(self):
-        """
-        Return a list of water heater devices.
-
-        Parses the response from the locations endpoint in to a pyeconet.WaterHeater.
-        """
-        water_heaters = []
-        for location in self.locations:
-            _location_id = location.get("id")
-            for device in location.get("equipment"):
-                if device.get("type") == "Water Heater":
-                    water_heater_modes = self.api_interface.get_modes(device.get("id"))
-                    water_heater_usage = self.api_interface.get_usage(device.get("id"))
-                    water_heater = self.api_interface.get_device(device.get("id"))
-                    vacations = self.api_interface.get_vacations()
-                    device_vacations = []
-                    for vacation in vacations:
-                        for equipment in vacation.get("participatingEquipment"):
-                            if equipment.get("id") == water_heater.get("id"):
-                                device_vacations.append(EcoNetVacation(vacation, self.api_interface))
-                    water_heaters.append(EcoNetWaterHeater(water_heater, water_heater_modes, water_heater_usage,
-                                                           _location_id,
-                                                           device_vacations,
-                                                           self.api_interface))
-        return water_heaters
+    async def _authenticate(self, payload: dict) -> None:
+        auth_response = requests.post(f"{REST_URL}/user/auth", data=json.dumps(payload), headers=HEADERS)
+        if auth_response.status_code == 200:
+            _json = auth_response.json()
+            _LOGGER.debug(_json)
+            if _json.get("options")["success"]:
+                self._user_token = _json.get("user_token")
+                self._account_id = _json.get("options").get("account_id")
+            else:
+                raise InvalidCredentialsError(_json.get("options")["message"])
+        else:
+            raise GenericHTTPError(auth_response.status_code)
