@@ -1,10 +1,12 @@
 import time
 import ssl
 import json
-from typing import Type, TypeVar
+from typing import Type, TypeVar, List, Dict
 import logging
 
-from pyeconet.errors import PyeconetError, InvalidCredentialsError, GenericHTTPError
+from pyeconet.errors import PyeconetError, InvalidCredentialsError, GenericHTTPError, InvalidResponseFormat
+from pyeconet.equipments import Equipment, EquipmentType
+from pyeconet.equipments.water_heater import WaterHeater
 
 import requests
 import paho.mqtt.client as mqtt
@@ -39,6 +41,7 @@ class EcoNetApiInterface:
         self.password: str = password
         self._user_token: str = user_token
         self._account_id: str = account_id
+        self._locations: List = []
 
     @property
     def user_token(self) -> str:
@@ -65,6 +68,32 @@ class EcoNetApiInterface:
             {"email": email, "password": password}
         )
         return this_class
+
+    async def get_equipment(self) -> List[Equipment]:
+        """Get a list of all the equipment for this user"""
+        _equipment = []
+        _locations: List = await self._get_location()
+        for _location in _locations:
+            # They spelled it wrong...
+            for _equip in _location.get("equiptments"):
+                if Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.WH:
+                    _equipment.append(WaterHeater(_equip))
+        return _equipment
+
+    async def _get_location(self) -> List[Dict]:
+        _headers = HEADERS
+        _headers["ClearBlade-UserToken"] = self._user_token
+        location_response = requests.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS)
+        if location_response.status_code == 200:
+            _json = location_response.json()
+            _LOGGER.debug(_json)
+            if _json.get("success"):
+                self._locations = _json["results"]["locations"]
+                return self._locations
+            else:
+                raise InvalidResponseFormat()
+        else:
+            raise GenericHTTPError(location_response.status_code)
 
     async def _authenticate(self, payload: dict) -> None:
         auth_response = requests.post(f"{REST_URL}/user/auth", data=json.dumps(payload), headers=HEADERS)
