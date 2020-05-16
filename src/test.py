@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import getpass
 
 from pyeconet import EcoNetApiInterface
 
@@ -14,12 +15,11 @@ requests_log.propagate = True
 
 
 async def main():
-    api = await EcoNetApiInterface.login("EMAIL", "PASSWORD")
+    email = getpass.getpass(prompt='Enter your email: ')
+    password = getpass.getpass(prompt='Enter your password: ')
+    api = await EcoNetApiInterface.login(email, password=password)
+    connected = await api.subscribe()
     all_equipment = await api.get_equipment()
-    for equipment in all_equipment:
-        print("Device type: ", str(equipment.type))
-        print("Device name id: ", equipment.device_name)
-        print("Device tank capacity: ", equipment.tank_hot_water_capacity)
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()

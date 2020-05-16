@@ -20,6 +20,18 @@ class Equipment:
     def __init__(self, equipment_info: dict) -> None:
         self._equipment_info = equipment_info
 
+    def _update_equipment_info(self, update: dict):
+        """Take a dictionary and update the stored _equipment_info based on the present dict fields"""
+        # Make sure this update is for this device, should probably check this before sending updates however
+        if update.get("device_name") == self.device_name and update.get("device_serial_number") == self.serial_number:
+            for key, value in update:
+                if key[0] == "@":
+                    self._equipment_info[key] = value
+                else:
+                    _LOGGER.debug("Not updating field because it isn't editable: %s, %s", key, value)
+                    pass
+
+
     @staticmethod
     def _coerce_type_from_string(value: str) -> EquipmentType:
         """Return a proper type from a string input."""
@@ -75,6 +87,6 @@ class Equipment:
         return self._equipment_info.get("serial_number")
 
     @property
-    def running(self) -> str:
-        """Return the equipment running state"""
-        return self._equipment_info.get("@RUNNING")
+    def running(self) -> bool:
+        """Return if the equipment is running or not"""
+        return self._equipment_info.get("@RUNNING") == "Running"
