@@ -75,6 +75,11 @@ class WaterHeater(Equipment):
             return None
 
     @property
+    def enabled(self) -> bool:
+        """Return the the water heater is enabled or not"""
+        return self._equipment_info.get("@ENABLED")["value"] == 1
+
+    @property
     def set_point(self) -> int:
         """Return the water heaters temperature set point"""
         return self._equipment_info.get("@SETPOINT")["value"]
@@ -82,7 +87,7 @@ class WaterHeater(Equipment):
     @property
     def set_point_limits(self) -> Tuple:
         """Returns a tuple of the lower limit and upper limit for the set point"""
-        set_point = self._equipment_info.get("@SETPOINT")
+        set_point = self._equipment_info.get("@SETPOINT")["constraints"]
         return set_point["lowerLimit"], set_point["upperLimit"]
 
     @property

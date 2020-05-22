@@ -1,14 +1,15 @@
 import time
 import ssl
 import json
-from typing import Type, TypeVar, List, Dict
+from typing import Type, TypeVar, List, Dict, Optional
 import logging
 
 from pyeconet.errors import PyeconetError, InvalidCredentialsError, GenericHTTPError, InvalidResponseFormat
 from pyeconet.equipments import Equipment, EquipmentType
 from pyeconet.equipments.water_heater import WaterHeater
 
-import requests
+from aiohttp import ClientSession, ClientTimeout
+from aiohttp.client_exceptions import ClientError
 import paho.mqtt.client as mqtt
 
 HOST = "rheem.clearblade.com"
@@ -28,7 +29,8 @@ class EcoNetApiInterface:
     API interface object.
     """
 
-    def __init__(self, email: str, password: str, account_id: str = None, user_token: str = None) -> None:
+    def __init__(self, email: str, password: str, session: ClientSession, account_id: str = None,
+                 user_token: str = None) -> None:
         """
         Create the EcoNet API interface object.
         Args:
@@ -43,6 +45,7 @@ class EcoNetApiInterface:
         self._locations: List = []
         self._equipment: Dict = {}
         self._mqtt_client = None
+        self._session: ClientSession = session
 
     @property
     def user_token(self) -> str:
@@ -64,13 +67,14 @@ class EcoNetApiInterface:
             password (str): EcoNet account password.
 
         """
-        this_class = cls(email, password)
+        session = ClientSession()
+        this_class = cls(email, password, session)
         await this_class._authenticate(
             {"email": email, "password": password}
         )
         return this_class
 
-    async def subscribe(self) -> bool:
+    def subscribe(self):
         """Subscribe to the MQTT updates"""
         if not self._equipment:
             _LOGGER.error("Equipment list is empty, did you call get_equipment before subscribing?")
@@ -84,55 +88,82 @@ class EcoNetApiInterface:
         self._mqtt_client.on_message = self._on_message
         self._mqtt_client.on_disconnect = self._on_disconnect
         self._mqtt_client.username_pw_set(self._user_token, password=CLEAR_BLADE_SYSTEM_KEY)
-        self._mqtt_client.connect(HOST, 1884, 60)
-        self._mqtt_client.loop_forever()
-        return self._mqtt_client.is_connected()
+        self._mqtt_client.connect_async(HOST, 1884, 60)
+        self._mqtt_client.loop_start()
+
+    def unsubscribe(self) -> None:
+        self._mqtt_client.loop_stop(force=True)
 
     def _get_client_id(self) -> str:
         time_string = str(time.time()).replace(".", "")[:13]
         return f"{self.email}{time_string}_android"
 
-    async def get_equipment(self) -> List[Equipment]:
+    async def _get_equipment(self) -> None:
         """Get a list of all the equipment for this user"""
-        _equipment = []
         _locations: List = await self._get_location()
         for _location in _locations:
-            # They spelled it wrong...
+            # They spelled it wrong...s
             for _equip in _location.get("equiptments"):
                 _equip_obj: Equipment = None
-                if Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.WH:
+                if Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.WATER_HEATER:
                     _equip_obj = WaterHeater(_equip)
-                    _equipment.append(_equip_obj)
-                self._equipment[_equip_obj.device_name + _equip_obj.serial_number] = _equip_obj
+                self._equipment[_equip_obj.device_id + _equip_obj.serial_number] = _equip_obj
+
+    async def get_equipment_by_type(self, equipment_type: List) -> Dict:
+        """Get a list of equipment by the equipments EquipmentType"""
+        if not self._equipment:
+            await self._get_equipment()
+        _equipment = {}
+        for _equip_type in equipment_type:
+            _equipment[_equip_type] = []
+        for value in self._equipment.values():
+            if value.type in equipment_type:
+                _equipment[value.type].append(value)
         return _equipment
 
     async def _get_location(self) -> List[Dict]:
         _headers = HEADERS
         _headers["ClearBlade-UserToken"] = self._user_token
-        location_response = requests.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS)
-        if location_response.status_code == 200:
-            _json = location_response.json()
-            _LOGGER.debug(_json)
-            if _json.get("success"):
-                self._locations = _json["results"]["locations"]
-                return self._locations
-            else:
-                raise InvalidResponseFormat()
+        use_running_session = self._session and not self._session.closed
+
+        if use_running_session:
+            session = self._session
         else:
-            raise GenericHTTPError(location_response.status_code)
+            session = ClientSession()
+        try:
+            async with session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS) as resp:
+                if resp.status == 200:
+                    _json = await resp.json()
+                    _LOGGER.debug(_json)
+                    if _json.get("success"):
+                        self._locations = _json["results"]["locations"]
+                        return self._locations
+                    else:
+                        raise InvalidResponseFormat()
+                else:
+                    raise GenericHTTPError(resp.status)
+        except ClientError as err:
+            raise err
+        finally:
+            await self._session.close()
 
     async def _authenticate(self, payload: dict) -> None:
-        auth_response = requests.post(f"{REST_URL}/user/auth", data=json.dumps(payload), headers=HEADERS)
-        if auth_response.status_code == 200:
-            _json = auth_response.json()
-            _LOGGER.debug(_json)
-            if _json.get("options")["success"]:
-                self._user_token = _json.get("user_token")
-                self._account_id = _json.get("options").get("account_id")
-            else:
-                raise InvalidCredentialsError(_json.get("options")["message"])
+        use_running_session = self._session and not self._session.closed
+        if use_running_session:
+            session = self._session
         else:
-            raise GenericHTTPError(auth_response.status_code)
+            session = ClientSession()
+        async with session.post(f"{REST_URL}/user/auth", json=payload, headers=HEADERS) as resp:
+            if resp.status == 200:
+                _json = await resp.json()
+                _LOGGER.debug(_json)
+                if _json.get("options")["success"]:
+                    self._user_token = _json.get("user_token")
+                    self._account_id = _json.get("options").get("account_id")
+                else:
+                    raise InvalidCredentialsError(_json.get("options")["message"])
+            else:
+                raise GenericHTTPError(resp.status)
 
     def _on_connect(self, client, userdata, flags, rc):
         print("Connected with result code " + str(rc))

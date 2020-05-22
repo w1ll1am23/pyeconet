@@ -2,16 +2,20 @@
 import logging
 
 from enum import Enum
+from typing import Dict
 
 _LOGGER = logging.getLogger(__name__)
+
+WATER_HEATER = "WH"
+THERMOSTAT = "TS"
 
 
 class EquipmentType(Enum):
     """Define the equipment type"""
 
-    WH = 1
-    TS = 2
-    XX = 99
+    WATER_HEATER = 1
+    THERMOSTAT = 2
+    UNKNOWN = 99
 
 
 class Equipment:
@@ -19,27 +23,55 @@ class Equipment:
 
     def __init__(self, equipment_info: dict) -> None:
         self._equipment_info = equipment_info
+        self._update_callback = None
+
+    def set_update_callback(self, callback):
+        self._update_callback = callback
 
     def _update_equipment_info(self, update: dict):
         """Take a dictionary and update the stored _equipment_info based on the present dict fields"""
         # Make sure this update is for this device, should probably check this before sending updates however
-        if update.get("device_name") == self.device_name and update.get("device_serial_number") == self.serial_number:
-            for key, value in update:
+        _set = False
+        if update.get("device_name") == self.device_id and update.get("serial_number") == self.serial_number:
+            for key, value in update.items():
                 if key[0] == "@":
-                    self._equipment_info[key] = value
+                    _LOGGER.debug("Equipment %s : %s", key, self._equipment_info[key])
+                    try:
+                        if isinstance(value, Dict):
+                            for _key, _value in value.items():
+                                self._equipment_info[key][_key] = _value
+                        else:
+                            if isinstance(self._equipment_info[key], Dict):
+                                if self._equipment_info[key].get("value") is not None:
+                                    self._equipment_info[key]["value"] = value
+                                    _set = True
+                            if not _set:
+                                self._equipment_info[key] = value
+                    except Exception:
+                        _LOGGER.error("Failed to update with message: %s", update)
+                    _LOGGER.debug("Equipment %s : %s", key, self._equipment_info[key])
+                    _set = True
                 else:
                     _LOGGER.debug("Not updating field because it isn't editable: %s, %s", key, value)
                     pass
 
+        else:
+            _LOGGER.debug("Invalid update for device: %s", update)
+
+        if self._update_callback is not None and _set:
+            _LOGGER.debug("Calling the call back to notify updates have occurred")
+            self._update_callback()
 
     @staticmethod
     def _coerce_type_from_string(value: str) -> EquipmentType:
         """Return a proper type from a string input."""
-        try:
-            return EquipmentType[value]
-        except KeyError:
+        if value == WATER_HEATER:
+            return EquipmentType.WATER_HEATER
+        elif value == THERMOSTAT:
+            return EquipmentType.THERMOSTAT
+        else:
             _LOGGER.error("Unknown equipment type state: %s", value)
-            return EquipmentType.XX
+            return EquipmentType.UNKNOWN
 
     @property
     def active(self) -> bool:
@@ -57,12 +89,12 @@ class Equipment:
         return self._equipment_info.get("@CONNECTED", True)
 
     @property
-    def generic_name(self) -> str:
-        """Return the gereric name of the equipment"""
+    def device_name(self) -> str:
+        """Return the generic name of the equipment"""
         return self._equipment_info.get("@NAME")["value"]
 
     @property
-    def device_name(self) -> str:
+    def device_id(self) -> str:
         """Return the number name of the equipment"""
         return self._equipment_info.get("device_name")
 

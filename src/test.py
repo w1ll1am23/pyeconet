@@ -3,23 +3,19 @@ import logging
 import getpass
 
 from pyeconet import EcoNetApiInterface
-
-import http.client as http_client
-http_client.HTTPConnection.debuglevel = 1
+from pyeconet.equipments import EquipmentType
 
 logging.basicConfig()
-logging.getLogger().setLevel(logging.INFO)
-requests_log = logging.getLogger("requests.packages.urllib3")
-requests_log.setLevel(logging.INFO)
-requests_log.propagate = True
+logging.getLogger().setLevel(logging.DEBUG)
 
 
 async def main():
-    email = getpass.getpass(prompt='Enter your email: ')
+    email = input("Enter your email: ").strip()
     password = getpass.getpass(prompt='Enter your password: ')
     api = await EcoNetApiInterface.login(email, password=password)
-    connected = await api.subscribe()
-    all_equipment = await api.get_equipment()
+    all_equipment = await api.get_equipment_by_type([EquipmentType.WATER_HEATER])
+    api.subscribe()
+    api.unsubscribe()
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
