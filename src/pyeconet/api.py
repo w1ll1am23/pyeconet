@@ -7,6 +7,7 @@ import logging
 from pyeconet.errors import PyeconetError, InvalidCredentialsError, GenericHTTPError, InvalidResponseFormat
 from pyeconet.equipments import Equipment, EquipmentType
 from pyeconet.equipments.water_heater import WaterHeater
+from pyeconet.equipments.thermostat import Thermostat
 
 from aiohttp import ClientSession, ClientTimeout
 from aiohttp.client_exceptions import ClientError
@@ -106,7 +107,9 @@ class EcoNetApiInterface:
             for _equip in _location.get("equiptments"):
                 _equip_obj: Equipment = None
                 if Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.WATER_HEATER:
-                    _equip_obj = WaterHeater(_equip)
+                    _equip_obj = WaterHeater(_equip, self)
+                elif Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.THERMOSTAT:
+                    _equip_obj = Thermostat(_equip, self)
                 self._equipment[_equip_obj.device_id + _equip_obj.serial_number] = _equip_obj
 
     async def get_equipment_by_type(self, equipment_type: List) -> Dict:
@@ -147,6 +150,32 @@ class EcoNetApiInterface:
         finally:
             await self._session.close()
 
+    async def get_dynamic_action(self, payload: Dict) -> Dict:
+        _headers = HEADERS
+        _headers["ClearBlade-UserToken"] = self._user_token
+        use_running_session = self._session and not self._session.closed
+
+        if use_running_session:
+            session = self._session
+        else:
+            session = ClientSession()
+        try:
+            async with session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction", json=payload,
+                                    headers=HEADERS) as resp:
+                if resp.status == 200:
+                    _json = await resp.json()
+                    _LOGGER.debug(_json)
+                    if _json.get("success"):
+                        return _json
+                    else:
+                        raise InvalidResponseFormat()
+                else:
+                    raise GenericHTTPError(resp.status)
+        except ClientError as err:
+            raise err
+        finally:
+            await self._session.close()
+
     async def _authenticate(self, payload: dict) -> None:
         use_running_session = self._session and not self._session.closed
         if use_running_session:
@@ -166,11 +195,11 @@ class EcoNetApiInterface:
                 raise GenericHTTPError(resp.status)
 
     def _on_connect(self, client, userdata, flags, rc):
-        print("Connected with result code " + str(rc))
+        _LOGGER.debug(f"Connected with result code: {str(rc)}")
         client.subscribe(f"user/{self._account_id}/device/reported")
 
     def _on_disconnect(self, client, userdata, rc):
-        print("Disconnected with result code " + str(rc))
+        _LOGGER.debug(f"Disconnected with result code: {str(rc)}")
 
     def _on_message(self, client, userdata, msg):
         """When a MQTT message comes in push that update to the specified equipment"""

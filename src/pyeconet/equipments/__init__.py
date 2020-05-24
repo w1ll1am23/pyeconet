@@ -2,12 +2,12 @@
 import logging
 
 from enum import Enum
-from typing import Dict
+from typing import Dict, Tuple
 
 _LOGGER = logging.getLogger(__name__)
 
 WATER_HEATER = "WH"
-THERMOSTAT = "TS"
+THERMOSTAT = "HVAC"
 
 
 class EquipmentType(Enum):
@@ -21,7 +21,8 @@ class EquipmentType(Enum):
 class Equipment:
     """Define an equipment"""
 
-    def __init__(self, equipment_info: dict) -> None:
+    def __init__(self, equipment_info: dict, api_interface) -> None:
+        self._api = api_interface
         self._equipment_info = equipment_info
         self._update_callback = None
 
@@ -122,3 +123,19 @@ class Equipment:
     def running(self) -> bool:
         """Return if the equipment is running or not"""
         return self._equipment_info.get("@RUNNING") == "Running"
+
+    @property
+    def alert_count(self) -> int:
+        """Return the number of active alerts"""
+        return self._equipment_info.get("@ALERTCOUNT")
+
+    @property
+    def set_point(self) -> int:
+        """Return the water heaters temperature set point"""
+        return self._equipment_info.get("@SETPOINT")["value"]
+
+    @property
+    def set_point_limits(self) -> Tuple:
+        """Returns a tuple of the lower limit and upper limit for the set point"""
+        set_point = self._equipment_info.get("@SETPOINT")["constraints"]
+        return set_point["lowerLimit"], set_point["upperLimit"]
