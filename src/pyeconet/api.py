@@ -1,8 +1,10 @@
+from datetime import datetime
 import time
 import ssl
 import json
 from typing import Type, TypeVar, List, Dict, Optional
 import logging
+
 
 from pyeconet.errors import PyeconetError, InvalidCredentialsError, GenericHTTPError, InvalidResponseFormat
 from pyeconet.equipments import Equipment, EquipmentType
@@ -92,6 +94,14 @@ class EcoNetApiInterface:
         self._mqtt_client.connect_async(HOST, 1884, 60)
         self._mqtt_client.loop_start()
 
+    def publish(self, payload: Dict, device_id: str, serial_number: str):
+        """Publish payload to the specified topic"""
+        date_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        transaction_id = f"ANDROID_{date_time}"
+        publish_payload = {"transactionId": transaction_id, "device_name": device_id, "serial_number": serial_number}
+        publish_payload.update(payload)
+        self._mqtt_client.publish(f"user/{self._account_id}/device/desired", payload=json.dumps(publish_payload))
+
     def unsubscribe(self) -> None:
         self._mqtt_client.loop_stop(force=True)
 
@@ -103,7 +113,7 @@ class EcoNetApiInterface:
         """Get a list of all the equipment for this user"""
         _locations: List = await self._get_location()
         for _location in _locations:
-            # They spelled it wrong...s
+            # They spelled it wrong...
             for _equip in _location.get("equiptments"):
                 _equip_obj: Equipment = None
                 if Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.WATER_HEATER:

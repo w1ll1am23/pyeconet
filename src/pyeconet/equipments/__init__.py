@@ -139,3 +139,8 @@ class Equipment:
         """Returns a tuple of the lower limit and upper limit for the set point"""
         set_point = self._equipment_info.get("@SETPOINT")["constraints"]
         return set_point["lowerLimit"], set_point["upperLimit"]
+
+    def set_set_point(self, set_point: int):
+        """Set the equipment set point to set_point."""
+        payload = {"@SETPOINT": set_point}
+        self._api.publish(payload, self.device_id, self.serial_number)

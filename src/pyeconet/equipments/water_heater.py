@@ -145,3 +145,21 @@ class WaterHeater(Equipment):
         for value in _response["results"]["energy_usage"]["data"]:
             _todays_usage += value["value"]
         _LOGGER.debug(_todays_usage)
+
+    def set_mode(self, mode: OperationMode):
+        """Set the provided mode or enable/disable if mode isn't support."""
+        payload = {}
+        self._api.publish(payload, self.device_id, self.serial_number)
+        if self._supports_modes():
+            text_modes = self._equipment_info("@MODE")["constraints"]["enumText"]
+            count = 0
+            for text_mode in text_modes:
+                if mode == OperationMode.by_string(text_mode):
+                    payload["@MODE"] = count
+                count = count + 1
+        else:
+            if mode == OperationMode.OFF:
+                payload["@ENABLED"] = 0
+            else:
+                payload["@ENABLED"] = 1
+        self._api.publish(payload, self.device_id, self.serial_number)
