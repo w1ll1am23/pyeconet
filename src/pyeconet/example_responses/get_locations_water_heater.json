@@ -1,0 +1,204 @@
+{
+    "results": {
+        "locations": [
+            {
+                "@AWAY": false,
+                "@AWAYCONFIG": true,
+                "@LOCATION_INFO": "CITY, ST",
+                "@LOCATION_NAME": "Home",
+                "@LOCATION_STATUS": "I'm Home",
+                "@VACATION": false,
+                "@VACATIONCONFIG": false,
+                "@WEATHER": "40°",
+                "@WEATHER_F": 40,
+                "@WEATHER_I": "",
+                "equiptments": [
+                    {
+                        "@ACTIVE": true,
+                        "@ALERTCOUNT": 0,
+                        "@AWAY": false,
+                        "@AWAYCONFIG": true,
+                        "@BCONFIG": [
+                            {
+                                "align": "center",
+                                "name": "@SCHEDULESTATUS",
+                                "type": "TEXT_LABEL_VIEW",
+                                "value": ""
+                            },
+                            {
+                                "name": "@SCHEDULERESUME",
+                                "title": "Resume",
+                                "type": "BUTTON_VIEW",
+                                "value": ""
+                            },
+                            {
+                                "align": "center",
+                                "type": "TEXT_LABEL_VIEW",
+                                "value": "Hot Water Availability"
+                            },
+                            {
+                                "align": "center",
+                                "name": "@HOTWATER",
+                                "title": "Hot Water Availability",
+                                "type": "SINGLE_IMAGE_VIEW",
+                                "value": "ic_tank_hundread_percent.png"
+                            }
+                        ],
+                        "@CONNECTED": true,
+                        "@DRACTIVE": {
+                            "constraints": {
+                                "dialog": [
+                                    {
+                                        "message": "This should not impact the water temperature in your home. Do you want to opt out for this event ?",
+                                        "title": "Tank temperature has been changed in response to a Utility Load Control event",
+                                        "value": 1
+                                    }
+                                ]
+                            },
+                            "value": ""
+                        },
+                        "@ENABLED": {
+                            "constraints": {
+                                "enumText": [
+                                    "Disabled",
+                                    "Enabled"
+                                ],
+                                "enumTextIcon": [
+                                    "ic_device_off.png",
+                                    "ic_enabled.png"
+                                ],
+                                "lowerLimit": 0,
+                                "upperLimit": 1
+                            },
+                            "status": "Enabled",
+                            "value": 1
+                        },
+                        "@HOTWATER": "ic_tank_hundread_percent.png",
+                        "@LEAKINSTALLED": {
+                            "constraints": {
+                                "align": "center",
+                                "bgcolor": "#11ab00",
+                                "enumText": [
+                                    "No",
+                                    "Yes"
+                                ],
+                                "enumTextIcon": [],
+                                "fontcolor": "#000000",
+                                "lowerLimit": 0,
+                                "upperLimit": 1
+                            },
+                            "status": "",
+                            "title": "Leak sensor connected",
+                            "value": 1
+                        },
+                        "@NAME": {
+                            "constraints": {
+                                "stringLength": 64
+                            },
+                            "value": "Gladiator Water Heater"
+                        },
+                        "@OVERRIDE": {
+                            "constraints": {
+                                "bgcolor": "#FFFF00",
+                                "fontcolor": "#000000",
+                                "icon": "ic_high_level_alert.png"
+                            },
+                            "status": "",
+                            "value": ""
+                        },
+                        "@OVERRIDESTATUS": "",
+                        "@RESUME": false,
+                        "@RUNNING": "",
+                        "@SCHEDULE": false,
+                        "@SCHEDULERESUME": "",
+                        "@SCHEDULESTATUS": "",
+                        "@SETPOINT": {
+                            "constraints": {
+                                "error": [],
+                                "isConversion": true,
+                                "lowerLimit": 110,
+                                "unit": 1,
+                                "upperLimit": 140,
+                                "warning": [
+                                    {
+                                        "message": "CAUTION HOT WATER. Contact may cause serious burns to skin",
+                                        "value": 121
+                                    }
+                                ]
+                            },
+                            "value": 126
+                        },
+                        "@STATUS": "Enabled",
+                        "@TANK": {
+                            "constraints": {
+                                "green": 55,
+                                "orange": 25,
+                                "red": 20
+                            },
+                            "status": "Element operating normally",
+                            "value": 100
+                        },
+                        "@TCONFIG": [
+                            {
+                                "align": "center",
+                                "name": "@OVERRIDESTATUS",
+                                "type": "TEXT_LABEL_VIEW",
+                                "value": ""
+                            },
+                            {
+                                "align": "center",
+                                "name": "@RUNNING",
+                                "type": "TEXT_LABEL_VIEW",
+                                "value": ""
+                            }
+                        ],
+                        "@TYPE": "hotspringWaterHeater",
+                        "@VACATION": false,
+                        "@VALVE": {
+                            "constraints": {
+                                "dialog": [
+                                    {
+                                        "message": "Closing the shut off valve will disable the water heater",
+                                        "title": "Closing Valve",
+                                        "value": 0
+                                    }
+                                ],
+                                "enumText": [
+                                    "Open",
+                                    "Close"
+                                ],
+                                "enumTextIcon": [],
+                                "error": [],
+                                "lowerLimit": 0,
+                                "upperLimit": 1
+                            },
+                            "status": "Open",
+                            "value": 0
+                        },
+                        "@VALVESTATUS": {
+                            "constraints": {
+                                "align": "center",
+                                "bgcolor": "#11ab00",
+                                "fontcolor": "#000000"
+                            },
+                            "status": "",
+                            "title": "Shut-OFF Valve - Open",
+                            "value": 1
+                        },
+                        "actions": [
+                            "waterheaterScheduleView",
+                            "networkSettings",
+                            "waterheaterUsageReportView",
+                            "waterheaterHealthView"
+                        ],
+                        "device_name": "74901882412345",
+                        "device_type": "WH",
+                        "serial_number": "Q032012345"
+                    }
+                ],
+                "location_id": "d89d2c77-ded4-442b-9b40-05f6c12345"
+            }
+        ]
+    },
+    "success": true
+}

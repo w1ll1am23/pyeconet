@@ -2,7 +2,7 @@
 import logging
 
 from enum import Enum
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,16 +33,16 @@ class Equipment:
         """Take a dictionary and update the stored _equipment_info based on the present dict fields"""
         # Make sure this update is for this device, should probably check this before sending updates however
         _set = False
-        if update.get("device_name") == self.device_id and update.get("serial_number") == self.serial_number:
+        if update.get("device_name") == self.device_id:
             for key, value in update.items():
                 if key[0] == "@":
-                    _LOGGER.debug("Equipment %s : %s", key, self._equipment_info[key])
+                    _LOGGER.debug("Equipment %s : %s", key, self._equipment_info.get(key))
                     try:
                         if isinstance(value, Dict):
                             for _key, _value in value.items():
                                 self._equipment_info[key][_key] = _value
                         else:
-                            if isinstance(self._equipment_info[key], Dict):
+                            if isinstance(self._equipment_info.get(key), Dict):
                                 if self._equipment_info[key].get("value") is not None:
                                     self._equipment_info[key]["value"] = value
                                     _set = True
@@ -50,7 +50,7 @@ class Equipment:
                                 self._equipment_info[key] = value
                     except Exception:
                         _LOGGER.error("Failed to update with message: %s", update)
-                    _LOGGER.debug("Equipment %s : %s", key, self._equipment_info[key])
+                    _LOGGER.debug("Equipment %s : %s", key, self._equipment_info.get(key))
                     _set = True
                 else:
                     _LOGGER.debug("Not updating field because it isn't editable: %s, %s", key, value)
@@ -140,7 +140,20 @@ class Equipment:
         set_point = self._equipment_info.get("@SETPOINT")["constraints"]
         return set_point["lowerLimit"], set_point["upperLimit"]
 
+    @property
+    def wifi_signal(self) -> Union[int, None]:
+        """Return the Wifi signal in db.
+
+        Note: this field isn't present in the REST API and only comes back on the devices MQTT topic.
+        That means this field will be None until an update comes through over MQTT.
+        """
+        return self._equipment_info.get("@SIGNAL")
+
     def set_set_point(self, set_point: int):
         """Set the equipment set point to set_point."""
-        payload = {"@SETPOINT": set_point}
-        self._api.publish(payload, self.device_id, self.serial_number)
+        lower, upper = self.set_point_limits
+        if lower <= set_point <= upper:
+            payload = {"@SETPOINT": set_point}
+            self._api.publish(payload, self.device_id, self.serial_number)
+        else:
+            _LOGGER.error("Set point out of range. Lower: %s Upper: %s Set point: %s", lower, upper, set_point)

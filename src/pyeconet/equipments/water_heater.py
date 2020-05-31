@@ -10,7 +10,7 @@ from pyeconet.equipments import Equipment
 _LOGGER = logging.getLogger(__name__)
 
 
-class OperationMode(Enum):
+class WaterHeaterOperationMode(Enum):
     """Define the operation mode"""
 
     OFF = 1
@@ -24,22 +24,27 @@ class OperationMode(Enum):
     def by_string(str_value: str):
         """Convert a string to a supported OperationMode"""
         _cleaned_string = str_value.rstrip().replace(" ", "_").upper()
-        if _cleaned_string == OperationMode.OFF.name.upper():
-            return OperationMode.OFF
-        elif _cleaned_string == OperationMode.ELECTRIC_MODE.name.upper():
-            return OperationMode.ELECTRIC_MODE
-        elif _cleaned_string == OperationMode.ENERGY_SAVING.name.upper():
-            return OperationMode.ENERGY_SAVING
-        elif _cleaned_string == OperationMode.HEAT_PUMP_ONLY.name.upper():
-            return OperationMode.HEAT_PUMP_ONLY
-        elif _cleaned_string == OperationMode.HIGH_DEMAND.name.upper():
-            return OperationMode.HIGH_DEMAND
+        if _cleaned_string == WaterHeaterOperationMode.OFF.name.upper():
+            return WaterHeaterOperationMode.OFF
+        elif _cleaned_string == WaterHeaterOperationMode.ELECTRIC_MODE.name.upper():
+            return WaterHeaterOperationMode.ELECTRIC_MODE
+        elif _cleaned_string == WaterHeaterOperationMode.ENERGY_SAVING.name.upper():
+            return WaterHeaterOperationMode.ENERGY_SAVING
+        elif _cleaned_string == WaterHeaterOperationMode.HEAT_PUMP_ONLY.name.upper():
+            return WaterHeaterOperationMode.HEAT_PUMP_ONLY
+        elif _cleaned_string == WaterHeaterOperationMode.HIGH_DEMAND.name.upper():
+            return WaterHeaterOperationMode.HIGH_DEMAND
         else:
             _LOGGER.error("Unknown mode: [%s]", str_value)
-            return OperationMode.UNKNOWN
+            return WaterHeaterOperationMode.UNKNOWN
 
 
 class WaterHeater(Equipment):
+
+    def __init__(self, equipment_info: dict, api_interface) -> None:
+        """Initialize."""
+        super().__init__(equipment_info, api_interface)
+        self.energy_usage = None
 
     @property
     def leak_installed(self) -> bool:
@@ -90,25 +95,25 @@ class WaterHeater(Equipment):
         return self._equipment_info.get("@MODE") is not None
 
     @property
-    def modes(self) -> List[OperationMode]:
+    def modes(self) -> List[WaterHeaterOperationMode]:
         """Return a list of supported operation modes"""
         _supported_modes = []
         if self._supports_modes():
             _modes = self._equipment_info.get("@MODE")["constraints"]["enumText"]
             for _mode in _modes:
-                _op_mode = OperationMode.by_string(_mode.rstrip().replace(" ", "_").upper())
-                if _op_mode is not OperationMode.UNKNOWN:
+                _op_mode = WaterHeaterOperationMode.by_string(_mode)
+                if _op_mode is not WaterHeaterOperationMode.UNKNOWN:
                     _supported_modes.append(_op_mode)
         else:
             # This is an electric only water heater supports on/off so...
-            _supported_modes = [OperationMode.OFF, OperationMode.ELECTRIC_MODE]
+            _supported_modes = [WaterHeaterOperationMode.OFF, WaterHeaterOperationMode.ELECTRIC_MODE]
         return _supported_modes
 
     @property
-    def mode(self) -> Union[OperationMode, None]:
+    def mode(self) -> Union[WaterHeaterOperationMode, None]:
         """Return the current mode"""
         if self._supports_modes():
-            return OperationMode.by_string(self._equipment_info.get("@MODE")["status"].rstrip().replace(" ", "_").upper())
+            return self.modes[self._equipment_info.get("@MODE")["value"]]
         else:
             return None
 
@@ -125,7 +130,11 @@ class WaterHeater(Equipment):
         """Return the alert override status"""
         return self._equipment_info.get("@OVERRIDESTATUS")
 
-    async def _get_energy_usage(self):
+    @property
+    def todays_energy_usage(self) -> Union[float, None]:
+        return self.energy_usage
+
+    async def get_energy_usage(self):
         """Call dynamic action for energy usage."""
         date = datetime.now()
         payload = {
@@ -144,21 +153,21 @@ class WaterHeater(Equipment):
         _todays_usage = 0
         for value in _response["results"]["energy_usage"]["data"]:
             _todays_usage += value["value"]
+        self.energy_usage = _todays_usage
         _LOGGER.debug(_todays_usage)
 
-    def set_mode(self, mode: OperationMode):
+    def set_mode(self, mode: WaterHeaterOperationMode):
         """Set the provided mode or enable/disable if mode isn't support."""
         payload = {}
-        self._api.publish(payload, self.device_id, self.serial_number)
         if self._supports_modes():
-            text_modes = self._equipment_info("@MODE")["constraints"]["enumText"]
+            text_modes = self._equipment_info["@MODE"]["constraints"]["enumText"]
             count = 0
             for text_mode in text_modes:
-                if mode == OperationMode.by_string(text_mode):
+                if mode == WaterHeaterOperationMode.by_string(text_mode):
                     payload["@MODE"] = count
                 count = count + 1
         else:
-            if mode == OperationMode.OFF:
+            if mode == WaterHeaterOperationMode.OFF:
                 payload["@ENABLED"] = 0
             else:
                 payload["@ENABLED"] = 1

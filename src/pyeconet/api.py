@@ -83,14 +83,14 @@ class EcoNetApiInterface:
             _LOGGER.error("Equipment list is empty, did you call get_equipment before subscribing?")
             return False
 
-        self._mqtt_client = mqtt.Client(self.email, clean_session=True, userdata=None, protocol=mqtt.MQTTv311)
+        self._mqtt_client = mqtt.Client(self._get_client_id(), clean_session=True, userdata=None, protocol=mqtt.MQTTv311)
+        self._mqtt_client.username_pw_set(self._user_token, password=CLEAR_BLADE_SYSTEM_KEY)
         self._mqtt_client.enable_logger()
         self._mqtt_client.tls_set(ca_certs=None, certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED,
                                   tls_version=ssl.PROTOCOL_TLS, ciphers=None)
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_message = self._on_message
         self._mqtt_client.on_disconnect = self._on_disconnect
-        self._mqtt_client.username_pw_set(self._user_token, password=CLEAR_BLADE_SYSTEM_KEY)
         self._mqtt_client.connect_async(HOST, 1884, 60)
         self._mqtt_client.loop_start()
 
@@ -120,7 +120,7 @@ class EcoNetApiInterface:
                     _equip_obj = WaterHeater(_equip, self)
                 elif Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.THERMOSTAT:
                     _equip_obj = Thermostat(_equip, self)
-                self._equipment[_equip_obj.device_id + _equip_obj.serial_number] = _equip_obj
+                self._equipment[_equip_obj.device_id] = _equip_obj
 
     async def get_equipment_by_type(self, equipment_type: List) -> Dict:
         """Get a list of equipment by the equipments EquipmentType"""
@@ -158,7 +158,7 @@ class EcoNetApiInterface:
         except ClientError as err:
             raise err
         finally:
-            await self._session.close()
+            await session.close()
 
     async def get_dynamic_action(self, payload: Dict) -> Dict:
         _headers = HEADERS
@@ -184,7 +184,7 @@ class EcoNetApiInterface:
         except ClientError as err:
             raise err
         finally:
-            await self._session.close()
+            await session.close()
 
     async def _authenticate(self, payload: dict) -> None:
         use_running_session = self._session and not self._session.closed
@@ -207,24 +207,28 @@ class EcoNetApiInterface:
     def _on_connect(self, client, userdata, flags, rc):
         _LOGGER.debug(f"Connected with result code: {str(rc)}")
         client.subscribe(f"user/{self._account_id}/device/reported")
+        client.subscribe(f"user/{self._account_id}/device/desired")
 
     def _on_disconnect(self, client, userdata, rc):
         _LOGGER.debug(f"Disconnected with result code: {str(rc)}")
+        if rc != 0:
+            _LOGGER.error("EcoNet MQTT unexpected disconnect. Attempting to reconnect.")
+            client.reconnect()
 
     def _on_message(self, client, userdata, msg):
         """When a MQTT message comes in push that update to the specified equipment"""
         try:
             unpacked_json = json.loads(msg.payload)
-            _LOGGER.debug("MQTT message")
+            _LOGGER.debug("MQTT message from topic: %s", msg.topic)
             _LOGGER.debug(json.dumps(unpacked_json, indent=2))
             _name = unpacked_json.get("device_name")
             _serial = unpacked_json.get("serial_number")
-            key = _name + _serial
+            key = _name
             _equipment = self._equipment.get(key)
             if _equipment is not None:
                 _equipment._update_equipment_info(unpacked_json)
             else:
-                _LOGGER.error("Received update for non-existent equipment with device name: %s and serial number %s",
+                _LOGGER.debug("Received update for non-existent equipment with device name: %s and serial number %s",
                               _name, _serial)
         except Exception as e:
             _LOGGER.exception(e)
