@@ -120,11 +120,6 @@ class Equipment:
         return self._equipment_info.get("serial_number")
 
     @property
-    def running(self) -> bool:
-        """Return if the equipment is running or not"""
-        return self._equipment_info.get("@RUNNING") == "Running"
-
-    @property
     def alert_count(self) -> int:
         """Return the number of active alerts"""
         return self._equipment_info.get("@ALERTCOUNT")
@@ -147,7 +142,14 @@ class Equipment:
         Note: this field isn't present in the REST API and only comes back on the devices MQTT topic.
         That means this field will be None until an update comes through over MQTT.
         """
-        return self._equipment_info.get("@SIGNAL")
+        signal = self._equipment_info.get("@SIGNAL")
+        try:
+            if signal:
+                signal = int(signal)
+        except TypeError:
+            if signal:
+                signal = self._equipment_info.get("@SIGNAL")["value"]
+        return signal
 
     def set_set_point(self, set_point: int):
         """Set the equipment set point to set_point."""

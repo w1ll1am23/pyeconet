@@ -60,6 +60,11 @@ class WaterHeater(Equipment):
         return self._equipment_info.get("@VALVE") is not None
 
     @property
+    def running(self) -> bool:
+        """Return if the water heater is running or not"""
+        return self._equipment_info.get("@RUNNING") == "Running"
+
+    @property
     def tank_hot_water_availability(self) -> Union[int, None]:
         """Return the hot water availability"""
         icon = self._equipment_info.get("@HOTWATER")
@@ -94,6 +99,10 @@ class WaterHeater(Equipment):
         """Return if the system supports modes or not"""
         return self._equipment_info.get("@MODE") is not None
 
+    def _supports_on_off(self) -> bool:
+        """Return if the system supports on and off"""
+        return self._equipment_info.get("@ENABLED") is not None
+
     @property
     def modes(self) -> List[WaterHeaterOperationMode]:
         """Return a list of supported operation modes"""
@@ -104,9 +113,12 @@ class WaterHeater(Equipment):
                 _op_mode = WaterHeaterOperationMode.by_string(_mode)
                 if _op_mode is not WaterHeaterOperationMode.UNKNOWN:
                     _supported_modes.append(_op_mode)
-        else:
+        elif self._supports_on_off():
             # This is an electric only water heater supports on/off so...
             _supported_modes = [WaterHeaterOperationMode.OFF, WaterHeaterOperationMode.ELECTRIC_MODE]
+        else:
+            # Nothing is supported by this unit, return empty list
+            _supported_modes = []
         return _supported_modes
 
     @property
@@ -120,10 +132,14 @@ class WaterHeater(Equipment):
     @property
     def enabled(self) -> bool:
         """Return the the water heater is enabled or not"""
-        if not self._supports_modes():
+        if self._supports_modes():
+            return self.mode != "OFF"
+        elif self._supports_on_off():
             return self._equipment_info.get("@ENABLED")["value"] == 1
         else:
-            return self.mode != "OFF"
+            # Unit is always on
+            return True
+
 
     @property
     def override_status(self) -> str:
@@ -166,9 +182,12 @@ class WaterHeater(Equipment):
                 if mode == WaterHeaterOperationMode.by_string(text_mode):
                     payload["@MODE"] = count
                 count = count + 1
-        else:
+        elif self._supports_on_off():
             if mode == WaterHeaterOperationMode.OFF:
                 payload["@ENABLED"] = 0
             else:
                 payload["@ENABLED"] = 1
-        self._api.publish(payload, self.device_id, self.serial_number)
+        else:
+            _LOGGER.error("Unit doesn't support on off or modes, shouldn't being trying to set a mode.")
+        if payload:
+            self._api.publish(payload, self.device_id, self.serial_number)

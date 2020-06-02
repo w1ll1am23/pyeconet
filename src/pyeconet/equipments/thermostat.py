@@ -32,9 +32,9 @@ class ThermostatOperationMode(Enum):
             return ThermostatOperationMode.COOLING
         elif _cleaned_string == ThermostatOperationMode.AUTO.name.upper():
             return ThermostatOperationMode.AUTO
-        elif _cleaned_string == ThermostatOperationMode.FAN_ONLY.name.upper():
+        elif _cleaned_string == ThermostatOperationMode.FAN_ONLY.name.replace("_", "").upper():
             return ThermostatOperationMode.FAN_ONLY
-        elif _cleaned_string == ThermostatOperationMode.EMERGENCY_HEAT.name.upper():
+        elif _cleaned_string == ThermostatOperationMode.EMERGENCY_HEAT.name.replace("_", "").upper():
             return ThermostatOperationMode.EMERGENCY_HEAT
         else:
             _LOGGER.error("Unknown mode: [%s]", str_value)
@@ -69,11 +69,16 @@ class ThermostatFanMode(Enum):
         elif _cleaned_string == ThermostatFanMode.HIGH.name.upper():
             return ThermostatFanMode.HIGH
         else:
-            _LOGGER.error("Unknown mode: [%s]", str_value)
+            _LOGGER.error("Unknown fan mode: [%s]", str_value)
             return ThermostatFanMode.UNKNOWN
 
 
 class Thermostat(Equipment):
+
+    @property
+    def running(self) -> bool:
+        """Return if the thermostat is running or not"""
+        return self._equipment_info.get("@RUNNINGSTATUS") == "Running"
 
     @property
     def beep_enabled(self) -> bool:
@@ -139,12 +144,13 @@ class Thermostat(Equipment):
             _LOGGER.error("Set point out of range. Lower: %s Upper: %s Humidity set point: %s", lower, upper, humidity)
 
     @property
-    def fan_speed(self) -> str:
-        return self._equipment_info.get("@FANSPEED")["status"]
+    def humidity(self) -> int:
+        """Returns the current humidity"""
+        return self._equipment_info.get("@HUMIDITY")["value"]
 
     @property
     def screen_locked(self) -> bool:
-        return self._equipment_info.get("SCREENLOCK")["value"] == 1
+        return self._equipment_info.get("@SCREENLOCK")["value"] == 1
 
     @property
     def modes(self) -> List[ThermostatOperationMode]:

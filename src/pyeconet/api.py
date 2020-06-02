@@ -5,7 +5,6 @@ import json
 from typing import Type, TypeVar, List, Dict, Optional
 import logging
 
-
 from pyeconet.errors import PyeconetError, InvalidCredentialsError, GenericHTTPError, InvalidResponseFormat
 from pyeconet.equipments import Equipment, EquipmentType
 from pyeconet.equipments.water_heater import WaterHeater
