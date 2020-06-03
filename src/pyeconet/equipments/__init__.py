@@ -80,6 +80,11 @@ class Equipment:
         return self._equipment_info.get("@ACTIVE", True)
 
     @property
+    def supports_away(self) -> bool:
+        """Return if the user has enabled away mode functionality for this equipment."""
+        return self._equipment_info.get("@AWAYCONFIG", False)
+
+    @property
     def away(self) -> bool:
         """Return if equipment has been set to away mode"""
         return self._equipment_info.get("@AWAY", False)
@@ -151,11 +156,9 @@ class Equipment:
                 signal = self._equipment_info.get("@SIGNAL")["value"]
         return signal
 
-    def set_set_point(self, set_point: int):
-        """Set the equipment set point to set_point."""
-        lower, upper = self.set_point_limits
-        if lower <= set_point <= upper:
-            payload = {"@SETPOINT": set_point}
-            self._api.publish(payload, self.device_id, self.serial_number)
+    def set_away_mode(self, away):
+        """Set the away mode for the equipment"""
+        if self.supports_away:
+            self._api.publish({"@AWAY": away}, self.device_id, self.serial_number)
         else:
-            _LOGGER.error("Set point out of range. Lower: %s Upper: %s Set point: %s", lower, upper, set_point)
+            _LOGGER.error("Unit isn't set up for away mode")

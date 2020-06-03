@@ -5,6 +5,7 @@ import logging
 from enum import Enum
 from typing import List, Union
 
+from pyeconet.errors import InvalidResponseFormat
 from pyeconet.equipments import Equipment
 
 _LOGGER = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class WaterHeaterOperationMode(Enum):
     ENERGY_SAVING = 3
     HEAT_PUMP_ONLY = 4
     HIGH_DEMAND = 5
+    GAS = 6
     UNKNOWN = 99
 
     @staticmethod
@@ -62,7 +64,7 @@ class WaterHeater(Equipment):
     @property
     def running(self) -> bool:
         """Return if the water heater is running or not"""
-        return self._equipment_info.get("@RUNNING") == "Running"
+        return self._equipment_info.get("@RUNNING") != ""
 
     @property
     def tank_hot_water_availability(self) -> Union[int, None]:
@@ -127,18 +129,21 @@ class WaterHeater(Equipment):
         if self._supports_modes():
             return self.modes[self._equipment_info.get("@MODE")["value"]]
         else:
-            return None
+            if self.generic_type == "gasWaterHeater":
+                return WaterHeaterOperationMode.GAS
+            else:
+                return WaterHeaterOperationMode.ELECTRIC_MODE
 
     @property
-    def enabled(self) -> bool:
+    def enabled(self) -> Union[bool, None]:
         """Return the the water heater is enabled or not"""
         if self._supports_modes():
             return self.mode != "OFF"
         elif self._supports_on_off():
             return self._equipment_info.get("@ENABLED")["value"] == 1
         else:
-            # Unit is always on
-            return True
+            # Unit doesn't support on/off or modes
+            return None
 
 
     @property
@@ -165,7 +170,11 @@ class WaterHeater(Equipment):
             },
             "usage_type": "energyUsage"
         }
-        _response = await self._api.get_dynamic_action(payload)
+        try:
+            _response = await self._api.get_dynamic_action(payload)
+        except InvalidResponseFormat:
+            _LOGGER.debug("Tried to get energy usage, but unit doesn't support it.")
+            return
         _todays_usage = 0
         for value in _response["results"]["energy_usage"]["data"]:
             _todays_usage += value["value"]
@@ -191,3 +200,12 @@ class WaterHeater(Equipment):
             _LOGGER.error("Unit doesn't support on off or modes, shouldn't being trying to set a mode.")
         if payload:
             self._api.publish(payload, self.device_id, self.serial_number)
+
+    def set_set_point(self, set_point: int):
+        """Set the equipment set point to set_point."""
+        lower, upper = self.set_point_limits
+        if lower <= set_point <= upper:
+            payload = {"@SETPOINT": set_point}
+            self._api.publish(payload, self.device_id, self.serial_number)
+        else:
+            _LOGGER.error("Set point out of range. Lower: %s Upper: %s Set point: %s", lower, upper, set_point)

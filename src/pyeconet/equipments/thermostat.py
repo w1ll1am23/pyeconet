@@ -23,7 +23,7 @@ class ThermostatOperationMode(Enum):
     @staticmethod
     def by_string(str_value: str):
         """Convert a string to a supported OperationMode"""
-        _cleaned_string = str_value.rstrip().replace(" ", "_").upper()
+        _cleaned_string = str_value.rstrip().replace(" ", "").upper()
         if _cleaned_string == ThermostatOperationMode.OFF.name.upper():
             return ThermostatOperationMode.OFF
         elif _cleaned_string == ThermostatOperationMode.HEATING.name.upper():
@@ -186,7 +186,7 @@ class Thermostat(Equipment):
         _modes = self._equipment_info.get("@FANSPEED")["constraints"]["enumText"]
         for _mode in _modes:
             _op_mode = ThermostatFanMode.by_string(_mode)
-            if _op_mode is not ThermostatOperationMode.UNKNOWN:
+            if _op_mode is not ThermostatFanMode.UNKNOWN:
                 _supported_modes.append(_op_mode)
         return _supported_modes
 
@@ -201,9 +201,50 @@ class Thermostat(Equipment):
         text_modes = self._equipment_info["@FANSPEED"]["constraints"]["enumText"]
         count = 0
         for text_mode in text_modes:
-            if mode == ThermostatOperationMode.by_string(text_mode):
+            if mode == ThermostatFanMode.by_string(text_mode):
                 payload["@FANSPEED"] = count
             count = count + 1
         self._api.publish(payload, self.device_id, self.serial_number)
 
+    def set_set_point(self, target_temp, target_temp_cool, target_temp_heat):
+        """Set the provided set points based on mode.
+
+        if just target temp is passed the temp of the current mode will be set to target_temp, this isn't valid for auto
+
+        If target_temp_cool or target_temp_heat are passed target_temp will be ignored.
+        """
+        cool_payload = {}
+        heat_payload = {}
+        if target_temp_cool or target_temp and self.mode == ThermostatOperationMode.COOLING:
+            _temp = target_temp if target_temp else target_temp_cool
+            if self.cool_set_point_limits[0] <= _temp <= self.cool_set_point_limits[1]:
+                cool_payload["@COOLSETPOINT"] = _temp
+            else:
+                _LOGGER.error("Cool set point out of range. Lower: %s Upper: %s Cool set point: %s",
+                              self.cool_set_point_limits[0], self.cool_set_point_limits[1], _temp)
+        if target_temp_heat:
+            _temp = target_temp if target_temp else target_temp_heat
+            if self.heat_set_point_limits[0] <= _temp <= self.heat_set_point_limits[1]:
+                heat_payload["@HEATSETPOINT"] = _temp
+            else:
+                _LOGGER.error("Heat set point out of range. Lower: %s Upper: %s Heat set point: %s",
+                              self.heat_set_point_limits[0], self.heat_set_point_limits[1], _temp)
+
+        has_set_temp = False
+        if cool_payload and self.mode in [ThermostatOperationMode.AUTO, ThermostatOperationMode.COOLING]:
+            self._api.publish(cool_payload, self.device_id, self.serial_number)
+            has_set_temp = True
+        if heat_payload and self.mode in [ThermostatOperationMode.AUTO, ThermostatOperationMode.HEATING,
+                                          ThermostatOperationMode.EMERGENCY_HEAT]:
+            self._api.publish(heat_payload, self.device_id, self.serial_number)
+            has_set_temp = True
+        if target_temp and not has_set_temp:
+            payload = {}
+            if self.mode == ThermostatOperationMode.COOLING:
+                payload = cool_payload
+            elif self.mode in [ThermostatOperationMode.HEATING, ThermostatOperationMode.EMERGENCY_HEAT]:
+                payload = heat_payload
+            else:
+                _LOGGER.error("Can't auto determine set point to set when mode is: %s", self.mode)
+            self._api.publish(payload, self.device_id, self.serial_number)
 
