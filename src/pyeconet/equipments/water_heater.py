@@ -20,6 +20,8 @@ class WaterHeaterOperationMode(Enum):
     HEAT_PUMP_ONLY = 4
     HIGH_DEMAND = 5
     GAS = 6
+    ENERGY_SAVER = 7
+    PERFORMANCE = 8
     UNKNOWN = 99
 
     @staticmethod
@@ -36,6 +38,13 @@ class WaterHeaterOperationMode(Enum):
             return WaterHeaterOperationMode.HEAT_PUMP_ONLY
         elif _cleaned_string == WaterHeaterOperationMode.HIGH_DEMAND.name.upper():
             return WaterHeaterOperationMode.HIGH_DEMAND
+        elif _cleaned_string == WaterHeaterOperationMode.GAS.name.upper():
+            return WaterHeaterOperationMode.GAS
+        elif _cleaned_string == WaterHeaterOperationMode.ENERGY_SAVER.name.upper():
+            # Treat ENERGY SAVER and ENERGY SAVING modes the same
+            return WaterHeaterOperationMode.ENERGY_SAVING
+        elif _cleaned_string == WaterHeaterOperationMode.PERFORMANCE.name.upper():
+            return WaterHeaterOperationMode.PERFORMANCE
         else:
             _LOGGER.error("Unknown mode: [%s]", str_value)
             return WaterHeaterOperationMode.UNKNOWN
