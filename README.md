@@ -1,3 +1,5 @@
+### **UPDATE**: 2020-07-19 - The REST based API has been discontinued by Rheem. This API is no longer functional.
+
 # pyeconet
 Python3 interface to the unofficial EcoNet API.
 
