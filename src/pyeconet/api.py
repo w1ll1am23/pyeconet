@@ -117,9 +117,24 @@ class EcoNetApiInterface:
                 _equip_obj: Equipment = None
                 if Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.WATER_HEATER:
                     _equip_obj = WaterHeater(_equip, self)
+                    self._equipment[_equip_obj.serial_number] = _equip_obj
                 elif Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.THERMOSTAT:
                     _equip_obj = Thermostat(_equip, self)
-                self._equipment[_equip_obj.device_id] = _equip_obj
+                    self._equipment[_equip_obj.serial_number] = _equip_obj
+                    for zoning_device in _equip.get("zoning_devices"):
+                        _equip_obj = Thermostat(zoning_device, self)
+                        self._equipment[_equip_obj.serial_number] = _equip_obj
+
+    async def refresh_equipment(self) -> None:
+        """Get a list of all the equipment for this user"""
+        _locations: List = await self._get_location()
+        for _location in _locations:
+            # They spelled it wrong...
+            for _equip in _location.get("equiptments"):
+                _equip_obj: Equipment = None
+                equipment = self._equipment.get(_equip.get("device_name", ""), None)
+                if equipment:
+                    equipment._update_equipment_info(_equip)
 
     async def get_equipment_by_type(self, equipment_type: List) -> Dict:
         """Get a list of equipment by the equipments EquipmentType"""
@@ -136,12 +151,8 @@ class EcoNetApiInterface:
     async def _get_location(self) -> List[Dict]:
         _headers = HEADERS
         _headers["ClearBlade-UserToken"] = self._user_token
-        use_running_session = self._session and not self._session.closed
 
-        if use_running_session:
-            session = self._session
-        else:
-            session = ClientSession()
+        session = ClientSession()
         try:
             async with session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS) as resp:
                 if resp.status == 200:
@@ -162,12 +173,8 @@ class EcoNetApiInterface:
     async def get_dynamic_action(self, payload: Dict) -> Dict:
         _headers = HEADERS
         _headers["ClearBlade-UserToken"] = self._user_token
-        use_running_session = self._session and not self._session.closed
 
-        if use_running_session:
-            session = self._session
-        else:
-            session = ClientSession()
+        session = ClientSession()
         try:
             async with session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction", json=payload,
                                     headers=HEADERS) as resp:
@@ -186,11 +193,8 @@ class EcoNetApiInterface:
             await session.close()
 
     async def _authenticate(self, payload: dict) -> None:
-        use_running_session = self._session and not self._session.closed
-        if use_running_session:
-            session = self._session
-        else:
-            session = ClientSession()
+
+        session = ClientSession()
         async with session.post(f"{REST_URL}/user/auth", json=payload, headers=HEADERS) as resp:
             if resp.status == 200:
                 _json = await resp.json()
@@ -222,10 +226,10 @@ class EcoNetApiInterface:
             _LOGGER.debug(json.dumps(unpacked_json, indent=2))
             _name = unpacked_json.get("device_name")
             _serial = unpacked_json.get("serial_number")
-            key = _name
+            key = _serial
             _equipment = self._equipment.get(key)
             if _equipment is not None:
-                _equipment._update_equipment_info(unpacked_json)
+                _equipment.update_equipment_info(unpacked_json)
             else:
                 _LOGGER.debug("Received update for non-existent equipment with device name: %s and serial number %s",
                               _name, _serial)

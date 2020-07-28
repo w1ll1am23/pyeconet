@@ -124,9 +124,14 @@ class WaterHeater(Equipment):
                 _op_mode = WaterHeaterOperationMode.by_string(_mode)
                 if _op_mode is not WaterHeaterOperationMode.UNKNOWN:
                     _supported_modes.append(_op_mode)
-        elif self._supports_on_off():
-            # This is an electric only water heater supports on/off so...
-            _supported_modes = [WaterHeaterOperationMode.OFF, WaterHeaterOperationMode.ELECTRIC_MODE]
+        if self._supports_on_off() and not _supported_modes:
+            _supported_modes.append(WaterHeaterOperationMode.OFF)
+            if self.generic_type == "gasWaterHeater":
+                _supported_modes.append(WaterHeaterOperationMode.GAS)
+            else:
+                _supported_modes.append(WaterHeaterOperationMode.ELECTRIC_MODE)
+        elif self._supports_on_off() and _supported_modes:
+            _supported_modes.append(WaterHeaterOperationMode.OFF)
         else:
             # Nothing is supported by this unit, return empty list
             _supported_modes = []
@@ -135,6 +140,9 @@ class WaterHeater(Equipment):
     @property
     def mode(self) -> Union[WaterHeaterOperationMode, None]:
         """Return the current mode"""
+        if self._supports_on_off():
+            if not self.enabled:
+                return WaterHeaterOperationMode.OFF
         if self._supports_modes():
             return self.modes[self._equipment_info.get("@MODE")["value"]]
         else:
@@ -147,7 +155,7 @@ class WaterHeater(Equipment):
     def enabled(self) -> Union[bool, None]:
         """Return the the water heater is enabled or not"""
         if self._supports_modes():
-            return self.mode != "OFF"
+            return self.modes[self._equipment_info.get("@MODE")["value"]] != "OFF"
         elif self._supports_on_off():
             return self._equipment_info.get("@ENABLED")["value"] == 1
         else:
@@ -193,13 +201,18 @@ class WaterHeater(Equipment):
     def set_mode(self, mode: WaterHeaterOperationMode):
         """Set the provided mode or enable/disable if mode isn't support."""
         payload = {}
-        if self._supports_modes():
-            text_modes = self._equipment_info["@MODE"]["constraints"]["enumText"]
-            count = 0
-            for text_mode in text_modes:
-                if mode == WaterHeaterOperationMode.by_string(text_mode):
-                    payload["@MODE"] = count
-                count = count + 1
+        if self._supports_modes() and self._supports_on_off():
+            if mode == WaterHeaterOperationMode.OFF:
+                payload["@ENABLED"] = 0
+            else:
+                if not self.enabled:
+                    self._api.publish({"@ENABLED": 1}, self.device_id, self.serial_number)
+                text_modes = self._equipment_info["@MODE"]["constraints"]["enumText"]
+                count = 0
+                for text_mode in text_modes:
+                    if mode == WaterHeaterOperationMode.by_string(text_mode):
+                        payload["@MODE"] = count
+                    count = count + 1
         elif self._supports_on_off():
             if mode == WaterHeaterOperationMode.OFF:
                 payload["@ENABLED"] = 0

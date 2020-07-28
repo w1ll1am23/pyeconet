@@ -144,6 +144,11 @@ class Thermostat(Equipment):
             _LOGGER.error("Set point out of range. Lower: %s Upper: %s Humidity set point: %s", lower, upper, humidity)
 
     @property
+    def zone_id(self) -> Union[str, None]:
+        """Return the zode id"""
+        return self._equipment_info.get("@ZONE_ID_NAME")
+
+    @property
     def humidity(self) -> int:
         """Returns the current humidity"""
         return self._equipment_info.get("@HUMIDITY")["value"]

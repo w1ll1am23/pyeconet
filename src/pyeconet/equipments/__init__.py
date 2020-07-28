@@ -29,7 +29,7 @@ class Equipment:
     def set_update_callback(self, callback):
         self._update_callback = callback
 
-    def _update_equipment_info(self, update: dict):
+    def update_equipment_info(self, update: dict):
         """Take a dictionary and update the stored _equipment_info based on the present dict fields"""
         # Make sure this update is for this device, should probably check this before sending updates however
         _set = False
@@ -155,6 +155,9 @@ class Equipment:
             if signal:
                 signal = self._equipment_info.get("@SIGNAL")["value"]
         return signal
+
+    def force_update_from_api(self):
+        self._api.refresh_equipment(self)
 
     def set_away_mode(self, away):
         """Set the away mode for the equipment"""
