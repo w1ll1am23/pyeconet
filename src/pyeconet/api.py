@@ -121,7 +121,7 @@ class EcoNetApiInterface:
                 elif Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.THERMOSTAT:
                     _equip_obj = Thermostat(_equip, self)
                     self._equipment[_equip_obj.serial_number] = _equip_obj
-                    for zoning_device in _equip.get("zoning_devices"):
+                    for zoning_device in _equip.get("zoning_devices", []):
                         _equip_obj = Thermostat(zoning_device, self)
                         self._equipment[_equip_obj.serial_number] = _equip_obj
 

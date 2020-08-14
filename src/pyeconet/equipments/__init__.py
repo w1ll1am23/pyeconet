@@ -36,21 +36,23 @@ class Equipment:
         if update.get("device_name") == self.device_id:
             for key, value in update.items():
                 if key[0] == "@":
-                    _LOGGER.debug("Equipment %s : %s", key, self._equipment_info.get(key))
+                    _LOGGER.debug("Before update %s : %s", key, self._equipment_info.get(key))
                     try:
                         if isinstance(value, Dict):
                             for _key, _value in value.items():
                                 self._equipment_info[key][_key] = _value
+                                _LOGGER.debug("Updating [%s][%s] = %s", key, _key, _value)
                         else:
                             if isinstance(self._equipment_info.get(key), Dict):
                                 if self._equipment_info[key].get("value") is not None:
                                     self._equipment_info[key]["value"] = value
-                                    _set = True
+                                    _LOGGER.debug("Updating [%s][value] = %s", key, value)
                             if not _set:
                                 self._equipment_info[key] = value
+                                _LOGGER.debug("Updating [%s] = %s", key, value)
                     except Exception:
                         _LOGGER.error("Failed to update with message: %s", update)
-                    _LOGGER.debug("Equipment %s : %s", key, self._equipment_info.get(key))
+                    _LOGGER.debug("After update %s : %s", key, self._equipment_info.get(key))
                     _set = True
                 else:
                     _LOGGER.debug("Not updating field because it isn't editable: %s, %s", key, value)

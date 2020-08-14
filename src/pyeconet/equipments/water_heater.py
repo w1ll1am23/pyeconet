@@ -132,9 +132,6 @@ class WaterHeater(Equipment):
                 _supported_modes.append(WaterHeaterOperationMode.ELECTRIC_MODE)
         elif self._supports_on_off() and _supported_modes:
             _supported_modes.append(WaterHeaterOperationMode.OFF)
-        else:
-            # Nothing is supported by this unit, return empty list
-            _supported_modes = []
         return _supported_modes
 
     @property
@@ -205,14 +202,21 @@ class WaterHeater(Equipment):
             if mode == WaterHeaterOperationMode.OFF:
                 payload["@ENABLED"] = 0
             else:
-                if not self.enabled:
-                    self._api.publish({"@ENABLED": 1}, self.device_id, self.serial_number)
+                if self._supports_on_off():
+                    payload["@ENABLED"] = 1
                 text_modes = self._equipment_info["@MODE"]["constraints"]["enumText"]
                 count = 0
                 for text_mode in text_modes:
                     if mode == WaterHeaterOperationMode.by_string(text_mode):
                         payload["@MODE"] = count
                     count = count + 1
+        elif self._supports_modes():
+            text_modes = self._equipment_info["@MODE"]["constraints"]["enumText"]
+            count = 0
+            for text_mode in text_modes:
+                if mode == WaterHeaterOperationMode.by_string(text_mode):
+                    payload["@MODE"] = count
+                count = count + 1
         elif self._supports_on_off():
             if mode == WaterHeaterOperationMode.OFF:
                 payload["@ENABLED"] = 0
