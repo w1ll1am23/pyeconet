@@ -1,5 +1,9 @@
 # Change log
 
+## 0.1.4
+
+- Move to the new API and MQTT push update system
+
 ## 0.0.12
 - Added water usage and usage reports for month and year
 
