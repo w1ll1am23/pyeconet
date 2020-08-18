@@ -1,0 +1,214 @@
+{
+    "results": {
+        "locations": [
+            {
+                "@AWAY": false,
+                "@AWAYCONFIG": true,
+                "@LOCATION_INFO": "CITY, ST",
+                "@LOCATION_NAME": "Home",
+                "@LOCATION_STATUS": "I'm Home",
+                "@VACATION": false,
+                "@VACATIONCONFIG": false,
+                "@WEATHER": "66°",
+                "@WEATHER_F": 66,
+                "@WEATHER_I": "",
+                "equiptments": [
+                    {
+                        "@ALERTCOUNT": 0,
+                        "@AWAY": false,
+                        "@AWAYCONFIG": true,
+                        "@BCONFIG": [
+                            {
+                                "align": "center",
+                                "isConversion": true,
+                                "name": "@RUNNINGSTATUS",
+                                "type": "TEXT_LABEL_VIEW",
+                                "value": ""
+                            },
+                            {
+                                "align": "center",
+                                "name": "@SCHEDULESTATUS",
+                                "type": "TEXT_LABEL_VIEW",
+                                "value": "Following Schedule"
+                            },
+                            {
+                                "name": "@SCHEDULERESUME",
+                                "title": "Resume",
+                                "type": "BUTTON_VIEW",
+                                "value": ""
+                            }
+                        ],
+                        "@BEEP": {
+                            "constraints": {
+                                "enumText": [
+                                    "No",
+                                    "Yes"
+                                ],
+                                "enumTextIcon": [],
+                                "lowerLimit": 0,
+                                "upperLimit": 1
+                            },
+                            "status": "Yes",
+                            "value": 1
+                        },
+                        "@CARDSTATUS": "Heating",
+                        "@CONNECTED": true,
+                        "@COOLSETPOINT": {
+                            "constraints": {
+                                "isConversion": true,
+                                "lowerLimit": 52,
+                                "unit": 1,
+                                "upperLimit": 92
+                            },
+                            "value": 70
+                        },
+                        "@DEADBAND": {
+                            "constraints": {
+                                "lowerLimit": 0,
+                                "unit": 6,
+                                "upperLimit": 6
+                            },
+                            "value": 2
+                        },
+                        "@DEHUMENABLE": {
+                            "constraints": {
+                                "enumText": [
+                                    "No",
+                                    "Yes"
+                                ],
+                                "enumTextIcon": [],
+                                "lowerLimit": 0,
+                                "upperLimit": 1
+                            },
+                            "status": "No",
+                            "value": 0
+                        },
+                        "@DEHUMSETPOINT": {
+                            "constraints": {
+                                "lowerLimit": 40,
+                                "unit": 3,
+                                "upperLimit": 60
+                            },
+                            "value": 52
+                        },
+                        "@DRACTIVE": {
+                            "constraints": {
+                                "dialog": [
+                                    {
+                                        "message": "This should not impact the water temperature in your home. Do you want to opt out for this event ?",
+                                        "title": "Tank temperature has been changed in response to a Utility Load Control event",
+                                        "value": 1
+                                    }
+                                ]
+                            },
+                            "value": ""
+                        },
+                        "@FANSPEED": {
+                            "constraints": {
+                                "enumText": [
+                                    "Auto",
+                                    "Low",
+                                    "Med.Lo",
+                                    "Medium",
+                                    "Med.Hi",
+                                    "High"
+                                ],
+                                "lowerLimit": 0,
+                                "upperLimit": 5
+                            },
+                            "status": "Auto",
+                            "value": 0
+                        },
+                        "@HEATSETPOINT": {
+                            "constraints": {
+                                "isConversion": true,
+                                "lowerLimit": 50,
+                                "unit": 1,
+                                "upperLimit": 90
+                            },
+                            "value": 68
+                        },
+                        "@HUMIDITY": {
+                            "constraints": {
+                                "lowerLimit": 0,
+                                "unit": 3,
+                                "upperLimit": 100
+                            },
+                            "value": 48
+                        },
+                        "@MODE": {
+                            "constraints": {
+                                "enumText": [
+                                    "Heating",
+                                    "Cooling",
+                                    "Auto",
+                                    "Fan Only",
+                                    "Off",
+                                    "Emergency Heat"
+                                ],
+                                "enumTextIcon": [
+                                    "ic_thermo_heating.png",
+                                    "ic_thermo_cooling.png",
+                                    "ic_thermo_auto.png",
+                                    "ic_fan.png",
+                                    "ic_device_off.png",
+                                    "http://heaticon.png"
+                                ],
+                                "lowerLimit": 0,
+                                "upperLimit": 5
+                            },
+                            "status": "Heating",
+                            "value": 0
+                        },
+                        "@NAME": {
+                            "constraints": {
+                                "stringLength": 64
+                            },
+                            "value": "Thermostat"
+                        },
+                        "@RESUME": false,
+                        "@RUNNINGSTATUS": "",
+                        "@SCHEDULE": true,
+                        "@SCHEDULERESUME": "",
+                        "@SCHEDULESTATUS": "Following Schedule",
+                        "@SCREENLOCK": {
+                            "constraints": {
+                                "enumText": [
+                                    "No",
+                                    "Yes"
+                                ],
+                                "enumTextIcon": [],
+                                "lowerLimit": 0,
+                                "upperLimit": 1
+                            },
+                            "status": "No",
+                            "value": 0
+                        },
+                        "@SETPOINT": {
+                            "constraints": {
+                                "isConversion": true,
+                                "lowerLimit": -40,
+                                "unit": 1,
+                                "upperLimit": 99
+                            },
+                            "value": 72
+                        },
+                        "@STATUS": "Heating",
+                        "@TYPE": "econetControlCenter",
+                        "@VACATION": false,
+                        "actions": [
+                            "networkSettings",
+                            "thermostatProductSettings",
+                            "thermostatScheduleView"
+                        ],
+                        "device_name": "74901882412345",
+                        "device_type": "HVAC",
+                        "serial_number": "Q032012345"
+                    }
+                ],
+                "location_id": "d89d2c77-ded4-442b-9b40-05f6c12345"
+            }
+        ]
+    },
+    "success": true
+}

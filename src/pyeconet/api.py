@@ -1,207 +1,238 @@
-import logging
+from datetime import datetime
+import time
+import ssl
 import json
+from typing import Type, TypeVar, List, Dict, Optional
+import logging
 
-import requests
+from pyeconet.errors import PyeconetError, InvalidCredentialsError, GenericHTTPError, InvalidResponseFormat
+from pyeconet.equipments import Equipment, EquipmentType
+from pyeconet.equipments.water_heater import WaterHeater
+from pyeconet.equipments.thermostat import Thermostat
 
-from .equipment.water_heater import EcoNetWaterHeater
-from .vacation import EcoNetVacation
+from aiohttp import ClientSession, ClientTimeout
+from aiohttp.client_exceptions import ClientError
+import paho.mqtt.client as mqtt
 
-BASE_URL = "https://econet-api.rheemcert.com"
-LOCATIONS_URL = BASE_URL + "/locations"
-DEVICE_URL = BASE_URL + "/equipment/%s"
-MODES_URL = DEVICE_URL + "/modes"
-USAGE_URL = DEVICE_URL + "/usage"
-VACATIONS_URL = BASE_URL + "/vacations"
-HEADERS = {"Authorization": "Bearer %s", "Content-Type": "application/json"}
-BASIC_HEADERS = {"Authorization": "Basic Y29tLnJoZWVtLmVjb25ldF9hcGk6c3RhYmxla2VybmVs"}
-USERNAME = None
-PASSWORD = None
+HOST = "rheem.clearblade.com"
+REST_URL = f"https://{HOST}/api/v/1"
+CLEAR_BLADE_SYSTEM_KEY = "e2e699cb0bb0bbb88fc8858cb5a401"
+CLEAR_BLADE_SYSTEM_SECRET = "E2E699CB0BE6C6FADDB1B0BC9A20"
+HEADERS = {"ClearBlade-SystemKey": CLEAR_BLADE_SYSTEM_KEY, "ClearBlade-SystemSecret": CLEAR_BLADE_SYSTEM_SECRET,
+           "Content-Type": "application/json; charset=UTF-8"}
 
 _LOGGER = logging.getLogger(__name__)
 
+ApiType = TypeVar("ApiType", bound="EcoNetApiInterface")
 
-class EcoNetApiInterface(object):
+
+class EcoNetApiInterface:
     """
     API interface object.
     """
 
-    def __init__(self, email, password):
+    def __init__(self, email: str, password: str, session: ClientSession, account_id: str = None,
+                 user_token: str = None) -> None:
         """
         Create the EcoNet API interface object.
         Args:
             email (str): EcoNet account email address.
             password (str): EcoNet account password.
-        """
-        self.email = email
-        self.password = password
-        self.token = None
-        self.refresh_token = None
-        self.last_api_call = None
-        self.state = []
-        # get a token
-        self.authenticated = self._authenticate()
 
-    @staticmethod
-    def set_state(_id, body):
         """
-        Set a devices state.
+        self.email: str = email
+        self.password: str = password
+        self._user_token: str = user_token
+        self._account_id: str = account_id
+        self._locations: List = []
+        self._equipment: Dict = {}
+        self._mqtt_client = None
+        self._session: ClientSession = session
+
+    @property
+    def user_token(self) -> str:
+        """Return the current user token"""
+        return self._user_token
+
+    @property
+    def account_id(self) -> str:
+        """Return the current user token"""
+        return self._account_id
+
+    @classmethod
+    async def login(cls: Type[ApiType],
+                    email: str,
+                    password: str) -> ApiType:
+        """Create an EcoNetApiInterface object using email and password
+        Args:
+            email (str): EcoNet account email address.
+            password (str): EcoNet account password.
+
         """
-        url = DEVICE_URL % _id
-        if "mode" in body:
-            url = MODES_URL % _id
-        arequest = requests.put(url, headers=HEADERS, data=json.dumps(body))
-        status_code = str(arequest.status_code)
-        if status_code != '202':
-            _LOGGER.error("State not accepted. " + status_code)
+        session = ClientSession()
+        this_class = cls(email, password, session)
+        await this_class._authenticate(
+            {"email": email, "password": password}
+        )
+        return this_class
+
+    def subscribe(self):
+        """Subscribe to the MQTT updates"""
+        if not self._equipment:
+            _LOGGER.error("Equipment list is empty, did you call get_equipment before subscribing?")
             return False
 
-    @staticmethod
-    def get_modes(_id):
-        """
-        Pull a water heater's modes from the API.
-        """
-        url = MODES_URL % _id
-        arequest = requests.get(url, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
-        return arequest.json()
+        self._mqtt_client = mqtt.Client(self._get_client_id(), clean_session=True, userdata=None, protocol=mqtt.MQTTv311)
+        self._mqtt_client.username_pw_set(self._user_token, password=CLEAR_BLADE_SYSTEM_KEY)
+        self._mqtt_client.enable_logger()
+        self._mqtt_client.tls_set(ca_certs=None, certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED,
+                                  tls_version=ssl.PROTOCOL_TLS, ciphers=None)
+        self._mqtt_client.on_connect = self._on_connect
+        self._mqtt_client.on_message = self._on_message
+        self._mqtt_client.on_disconnect = self._on_disconnect
+        self._mqtt_client.connect_async(HOST, 1884, 60)
+        self._mqtt_client.loop_start()
 
-    @staticmethod
-    def get_usage(_id):
-        """
-        Pull a water heater's usage report from the API.
-        """
-        url = USAGE_URL % _id
-        arequest = requests.get(url, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
+    def publish(self, payload: Dict, device_id: str, serial_number: str):
+        """Publish payload to the specified topic"""
+        date_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        transaction_id = f"ANDROID_{date_time}"
+        publish_payload = {"transactionId": transaction_id, "device_name": device_id, "serial_number": serial_number}
+        publish_payload.update(payload)
+        self._mqtt_client.publish(f"user/{self._account_id}/device/desired", payload=json.dumps(publish_payload))
+
+    def unsubscribe(self) -> None:
+        self._mqtt_client.loop_stop(force=True)
+
+    def _get_client_id(self) -> str:
+        time_string = str(time.time()).replace(".", "")[:13]
+        return f"{self.email}{time_string}_android"
+
+    async def _get_equipment(self) -> None:
+        """Get a list of all the equipment for this user"""
+        _locations: List = await self._get_location()
+        for _location in _locations:
+            # They spelled it wrong...
+            for _equip in _location.get("equiptments"):
+                _equip_obj: Equipment = None
+                if Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.WATER_HEATER:
+                    _equip_obj = WaterHeater(_equip, self)
+                    self._equipment[_equip_obj.serial_number] = _equip_obj
+                elif Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.THERMOSTAT:
+                    _equip_obj = Thermostat(_equip, self)
+                    self._equipment[_equip_obj.serial_number] = _equip_obj
+                    for zoning_device in _equip.get("zoning_devices", []):
+                        _equip_obj = Thermostat(zoning_device, self)
+                        self._equipment[_equip_obj.serial_number] = _equip_obj
+
+    async def refresh_equipment(self) -> None:
+        """Get a list of all the equipment for this user"""
+        _locations: List = await self._get_location()
+        for _location in _locations:
+            # They spelled it wrong...
+            for _equip in _location.get("equiptments"):
+                _equip_obj: Equipment = None
+                equipment = self._equipment.get(_equip.get("device_name", ""), None)
+                if equipment:
+                    equipment._update_equipment_info(_equip)
+
+    async def get_equipment_by_type(self, equipment_type: List) -> Dict:
+        """Get a list of equipment by the equipments EquipmentType"""
+        if not self._equipment:
+            await self._get_equipment()
+        _equipment = {}
+        for _equip_type in equipment_type:
+            _equipment[_equip_type] = []
+        for value in self._equipment.values():
+            if value.type in equipment_type:
+                _equipment[value.type].append(value)
+        return _equipment
+
+    async def _get_location(self) -> List[Dict]:
+        _headers = HEADERS
+        _headers["ClearBlade-UserToken"] = self._user_token
+
+        session = ClientSession()
         try:
-            return arequest.json()
-        except ValueError:
-            _LOGGER.info("Failed to get usage. Not supported by unit?")
-            return None
+            async with session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS) as resp:
+                if resp.status == 200:
+                    _json = await resp.json()
+                    _LOGGER.debug(_json)
+                    if _json.get("success"):
+                        self._locations = _json["results"]["locations"]
+                        return self._locations
+                    else:
+                        raise InvalidResponseFormat()
+                else:
+                    raise GenericHTTPError(resp.status)
+        except ClientError as err:
+            raise err
+        finally:
+            await session.close()
 
-    @staticmethod
-    def get_device(_id):
-        """
-        Pull a device from the API.
-        """
-        url = DEVICE_URL % _id
-        arequest = requests.get(url, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
-        return arequest.json()
+    async def get_dynamic_action(self, payload: Dict) -> Dict:
+        _headers = HEADERS
+        _headers["ClearBlade-UserToken"] = self._user_token
 
-    @staticmethod
-    def get_locations():
-        """
-        Pull the accounts locations.
-        """
-        arequest = requests.get(LOCATIONS_URL, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
-        return arequest.json()
+        session = ClientSession()
+        try:
+            async with session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction", json=payload,
+                                    headers=HEADERS) as resp:
+                if resp.status == 200:
+                    _json = await resp.json()
+                    _LOGGER.debug(_json)
+                    if _json.get("success"):
+                        return _json
+                    else:
+                        raise InvalidResponseFormat()
+                else:
+                    raise GenericHTTPError(resp.status)
+        except ClientError as err:
+            raise err
+        finally:
+            await session.close()
 
-    @staticmethod
-    def get_vacations():
-        """
-        Pull the accounts vacations.
-        """
-        arequest = requests.get(VACATIONS_URL, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code == '401':
-            _LOGGER.error("Token expired.")
-            return False
-        return arequest.json()
+    async def _authenticate(self, payload: dict) -> None:
 
-    @staticmethod
-    def create_vacation(body):
-        """
-        Create a vacation.
-        """
-        arequest = requests.post(VACATIONS_URL, headers=HEADERS, data=json.dumps(body))
-        status_code = str(arequest.status_code)
-        if status_code != '200':
-            _LOGGER.error("Failed to create vacation. " + status_code)
-            _LOGGER.error(arequest.json())
-            return False
-        return arequest.json()
+        session = ClientSession()
+        async with session.post(f"{REST_URL}/user/auth", json=payload, headers=HEADERS) as resp:
+            if resp.status == 200:
+                _json = await resp.json()
+                _LOGGER.debug(_json)
+                if _json.get("options")["success"]:
+                    self._user_token = _json.get("user_token")
+                    self._account_id = _json.get("options").get("account_id")
+                else:
+                    raise InvalidCredentialsError(_json.get("options")["message"])
+            else:
+                raise GenericHTTPError(resp.status)
 
-    @staticmethod
-    def delete_vacation(_id):
-        """
-        Delete a vacation by ID.
-        """
-        arequest = requests.delete(VACATIONS_URL + "/" + _id, headers=HEADERS)
-        status_code = str(arequest.status_code)
-        if status_code != '202':
-            _LOGGER.error("Failed to delete vacation. " + status_code)
-            return False
-        return True
+    def _on_connect(self, client, userdata, flags, rc):
+        _LOGGER.debug(f"Connected with result code: {str(rc)}")
+        client.subscribe(f"user/{self._account_id}/device/reported")
+        client.subscribe(f"user/{self._account_id}/device/desired")
 
-    def _authenticate(self):
-        """
-        Authenticate with the API and return an authentication token.
-        """
-        auth_url = BASE_URL + "/auth/token"
-        payload = {'username': self.email, 'password': self.password, 'grant_type': 'password'}
-        arequest = requests.post(auth_url, data=payload, headers=BASIC_HEADERS)
-        status = arequest.status_code
-        if status != 200:
-            _LOGGER.error("Authentication request failed, please check credintials. " + str(status))
-            return False
-        response = arequest.json()
-        _LOGGER.debug(str(response))
-        self.token = response.get("access_token")
-        self.refresh_token = response.get("refresh_token")
-        _auth = HEADERS.get("Authorization")
-        _auth = _auth % self.token
-        HEADERS["Authorization"] = _auth
-        _LOGGER.info("Authentication was successful, token set.")
-        return True
+    def _on_disconnect(self, client, userdata, rc):
+        _LOGGER.debug(f"Disconnected with result code: {str(rc)}")
+        if rc != 0:
+            _LOGGER.error("EcoNet MQTT unexpected disconnect. Attempting to reconnect.")
+            client.reconnect()
 
-
-# pylint: disable=too-few-public-methods
-class PyEcoNet(object):
-    """
-    Object used to interact with this library.
-    """
-
-    def __init__(self, username, password):
-        self.api_interface = EcoNetApiInterface(username, password)
-        self.connected = self.api_interface.authenticated
-        self.locations = self.api_interface.get_locations()
-
-    def get_water_heaters(self):
-        """
-        Return a list of water heater devices.
-
-        Parses the response from the locations endpoint in to a pyeconet.WaterHeater.
-        """
-        water_heaters = []
-        for location in self.locations:
-            _location_id = location.get("id")
-            for device in location.get("equipment"):
-                if device.get("type") == "Water Heater":
-                    water_heater_modes = self.api_interface.get_modes(device.get("id"))
-                    water_heater_usage = self.api_interface.get_usage(device.get("id"))
-                    water_heater = self.api_interface.get_device(device.get("id"))
-                    vacations = self.api_interface.get_vacations()
-                    device_vacations = []
-                    for vacation in vacations:
-                        for equipment in vacation.get("participatingEquipment"):
-                            if equipment.get("id") == water_heater.get("id"):
-                                device_vacations.append(EcoNetVacation(vacation, self.api_interface))
-                    water_heaters.append(EcoNetWaterHeater(water_heater, water_heater_modes, water_heater_usage,
-                                                           _location_id,
-                                                           device_vacations,
-                                                           self.api_interface))
-        return water_heaters
+    def _on_message(self, client, userdata, msg):
+        """When a MQTT message comes in push that update to the specified equipment"""
+        try:
+            unpacked_json = json.loads(msg.payload)
+            _LOGGER.debug("MQTT message from topic: %s", msg.topic)
+            _LOGGER.debug(json.dumps(unpacked_json, indent=2))
+            _name = unpacked_json.get("device_name")
+            _serial = unpacked_json.get("serial_number")
+            key = _serial
+            _equipment = self._equipment.get(key)
+            if _equipment is not None:
+                _equipment.update_equipment_info(unpacked_json)
+            else:
+                _LOGGER.debug("Received update for non-existent equipment with device name: %s and serial number %s",
+                              _name, _serial)
+        except Exception as e:
+            _LOGGER.exception(e)
+            _LOGGER.error("Failed to parse MQTT message: %s", msg.payload)

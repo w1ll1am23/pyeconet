@@ -1,0 +1,28 @@
+{
+    "user_token": "QyrHnY-Fn7gTDfES12345",
+    "user_id": "808dfae30bf412345",
+    "options": {
+        "account_id": "571092412345",
+        "allow_email_notifications": false,
+        "allow_product_alert_emails": false,
+        "allow_product_alert_text_msg": false,
+        "allow_push_notifications": true,
+        "allow_special_offers_emails": false,
+        "allow_special_offers_text_msg": false,
+        "allow_text_notifications": true,
+        "cb_service_account": false,
+        "connected": true,
+        "email": "email@email.com",
+        "first_name": "",
+        "is_phone_verified": true,
+        "last_name": "",
+        "phone_number": "5555555555",
+        "receive_marketing_messages": false,
+        "report_state": true,
+        "role": 0,
+        "share_status": 0,
+        "success": true,
+        "temperature_display_unit": "Fahrenheit",
+        "user_id": "808dfae30bf412345"
+    }
+}

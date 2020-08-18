@@ -1,0 +1,204 @@
+{
+    "results": {
+        "energy_usage": {
+            "data": [
+                {
+                    "name": "1",
+                    "value": 0
+                },
+                {
+                    "name": "2",
+                    "value": 0
+                },
+                {
+                    "name": "3",
+                    "value": 0
+                },
+                {
+                    "name": "4",
+                    "value": 0
+                },
+                {
+                    "name": "5",
+                    "value": 0
+                },
+                {
+                    "name": "6",
+                    "value": 0
+                },
+                {
+                    "name": "7",
+                    "value": 0
+                },
+                {
+                    "name": "8",
+                    "value": 0
+                },
+                {
+                    "name": "9",
+                    "value": 0.63
+                },
+                {
+                    "name": "10",
+                    "value": 0
+                },
+                {
+                    "name": "11",
+                    "value": 0.66
+                },
+                {
+                    "name": "12",
+                    "value": 0
+                },
+                {
+                    "name": "13",
+                    "value": 0.55
+                },
+                {
+                    "name": "14",
+                    "value": 0.58
+                },
+                {
+                    "name": "15",
+                    "value": 0
+                },
+                {
+                    "name": "16",
+                    "value": 0
+                },
+                {
+                    "name": "17",
+                    "value": 0
+                },
+                {
+                    "name": "18",
+                    "value": 0
+                },
+                {
+                    "name": "19",
+                    "value": 0
+                },
+                {
+                    "name": "20",
+                    "value": 0
+                },
+                {
+                    "name": "21",
+                    "value": 1.37
+                },
+                {
+                    "name": "22",
+                    "value": 1.93
+                },
+                {
+                    "name": "23",
+                    "value": 0
+                },
+                {
+                    "name": "24",
+                    "value": 0
+                }
+            ],
+            "historyData": [
+                {
+                    "name": "1",
+                    "value": 0
+                },
+                {
+                    "name": "2",
+                    "value": 0
+                },
+                {
+                    "name": "3",
+                    "value": 0
+                },
+                {
+                    "name": "4",
+                    "value": 0
+                },
+                {
+                    "name": "5",
+                    "value": 0
+                },
+                {
+                    "name": "6",
+                    "value": 0
+                },
+                {
+                    "name": "7",
+                    "value": 0
+                },
+                {
+                    "name": "8",
+                    "value": 0
+                },
+                {
+                    "name": "9",
+                    "value": 0
+                },
+                {
+                    "name": "10",
+                    "value": 0.67
+                },
+                {
+                    "name": "11",
+                    "value": 0
+                },
+                {
+                    "name": "12",
+                    "value": 0.56
+                },
+                {
+                    "name": "13",
+                    "value": 0
+                },
+                {
+                    "name": "14",
+                    "value": 0
+                },
+                {
+                    "name": "15",
+                    "value": 0
+                },
+                {
+                    "name": "16",
+                    "value": 0.5
+                },
+                {
+                    "name": "17",
+                    "value": 0
+                },
+                {
+                    "name": "18",
+                    "value": 0
+                },
+                {
+                    "name": "19",
+                    "value": 0
+                },
+                {
+                    "name": "20",
+                    "value": 0.54
+                },
+                {
+                    "name": "21",
+                    "value": 0
+                },
+                {
+                    "name": "22",
+                    "value": 0
+                },
+                {
+                    "name": "23",
+                    "value": 0
+                },
+                {
+                    "name": "24",
+                    "value": 0
+                }
+            ],
+            "message": "<p>You've used <b>5.72</b> kWh units of energy</p>"
+        }
+    },
+    "success": true
+}

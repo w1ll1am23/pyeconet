@@ -1,0 +1,134 @@
+{
+  "results": {
+    "locations": [
+      {
+        "@AWAY": false,
+        "@AWAYCONFIG": true,
+        "@LOCATION_INFO": "CITY, ST",
+        "@LOCATION_NAME": "Home",
+        "@LOCATION_STATUS": "I'm Home",
+        "@VACATION": false,
+        "@VACATIONCONFIG": false,
+        "@WEATHER": "83°",
+        "@WEATHER_F": 83,
+        "@WEATHER_I": "",
+        "equiptments": [
+          {
+            "@ALERTCOUNT": 0,
+            "@AWAY": false,
+            "@AWAYCONFIG": true,
+            "@BCONFIG": [
+              {
+                "align": "center",
+                "name": "@SCHEDULESTATUS",
+                "type": "TEXT_LABEL_VIEW",
+                "value": ""
+              },
+              {
+                "name": "@SCHEDULERESUME",
+                "title": "Resume",
+                "type": "BUTTON_VIEW",
+                "value": ""
+              }
+            ],
+            "@CONFIG": [
+              {
+                "align": "center",
+                "name": "@SETWARNING",
+                "type": "TEXT_LABEL_VIEW",
+                "value": "The temperature control located on the water heater is set to a maximum temperature of 140"
+              }
+            ],
+            "@CONNECTED": true,
+            "@DRACTIVE": {
+              "constraints": {
+                "dialog": [
+                  {
+                    "message": "This should not impact the water temperature in your home. Do you want to opt out for this event ?",
+                    "title": "Tank temperature has been changed in response to a Utility Load Control event",
+                    "value": 1
+                  }
+                ]
+              },
+              "value": ""
+            },
+            "@IP_ADDRESS": {
+              "constraints": {
+                "stringLength": 32
+              },
+              "value": "192.168.1.2"
+            },
+            "@MAC_ADDRESS": {
+              "value": "54-23-1E-12-12-12"
+            },
+            "@NAME": {
+              "constraints": {
+                "stringLength": 64
+              },
+              "value": "Gas Water Heater [WiFi]"
+            },
+            "@RESUME": false,
+            "@RUNNING": "",
+            "@SCHEDULE": false,
+            "@SCHEDULERESUME": "",
+            "@SCHEDULESTATUS": "",
+            "@SERVER_STATUS": "",
+            "@SETPOINT": {
+              "constraints": {
+                "error": [],
+                "isConversion": true,
+                "lowerLimit": 90,
+                "unit": 1,
+                "upperLimit": 140,
+                "warning": [
+                  {
+                    "message": "CAUTION HOT WATER. Contact may cause serious burns to skin",
+                    "value": 121
+                  }
+                ]
+              },
+              "value": 120
+            },
+            "@SETWARNING": "The temperature control located on the water heater is set to a maximum temperature of 140",
+            "@SIGNAL": {
+              "constraints": {
+                "lowerLimit": -500,
+                "upperLimit": 500
+              },
+              "icon": "ic_signalstrength_1.png",
+              "value": -75
+            },
+            "@SSID": {
+              "constraints": {
+                "stringLength": 32
+              },
+              "value": "wap"
+            },
+            "@TCONFIG": [
+              {
+                "align": "center",
+                "name": "@RUNNING",
+                "type": "TEXT_LABEL_VIEW",
+                "value": ""
+              }
+            ],
+            "@TYPE": "gasWaterHeater",
+            "@VACATION": false,
+            "@VERSION": {
+              "value": "RH-WIFI-00-01-06"
+            },
+            "actions": [
+              "networkSettings",
+              "waterheaterScheduleView"
+            ],
+            "device_name": "74901882412345",
+            "device_type": "WH",
+            "serial_number": "Q032012345"
+          }
+        ],
+        "location_id": "d89d2c77-ded4-442b-9b40-05f6c12345"
+      }
+    ]
+  },
+  "success": true
+}

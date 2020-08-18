@@ -1,0 +1,113 @@
+{
+  "results": {
+    "locations": [{
+      "@AWAY": false,
+      "@AWAYCONFIG": false,
+      "@LOCATION_INFO": "City, State_Code",
+      "@LOCATION_NAME": "Home",
+      "@LOCATION_STATUS": "I'm Home",
+      "@VACATION": false,
+      "@VACATIONCONFIG": false,
+      "@WEATHER": "71°",
+      "@WEATHER_F": 71,
+      "@WEATHER_I": "",
+      "equiptments": [{
+        "@ACTIVE": true,
+        "@ALERTCOUNT": 0,
+        "@AWAY": false,
+        "@BCONFIG": [{
+          "align": "center",
+          "name": "@SCHEDULESTATUS",
+          "type": "TEXT_LABEL_VIEW",
+          "value": ""
+        }, {
+          "name": "@SCHEDULERESUME",
+          "title": "Resume",
+          "type": "BUTTON_VIEW",
+          "value": ""
+        }],
+        "@CONNECTED": true,
+        "@DRACTIVE": {
+          "constraints": {
+            "dialog": [{
+              "message": "This should not impact the water temperature in your home. Do you want to opt out for this event ?",
+              "title": "Tank temperature has been changed in response to a Utility Load Control event",
+              "value": 1
+            }]
+          },
+          "value": ""
+        },
+        "@MODE": {
+          "constraints": {
+            "enumText": ["OFF", "ENERGY SAVING", "HEAT PUMP ONLY ", "HIGH DEMAND", "ELECTRIC MODE"],
+            "enumTextIcon": ["ic_device_off.png", "ic_energy_saver.png", "ic_heat_pump.png", "ic_high_demand.png", "ic_electric.png"],
+            "lowerLimit": 0,
+            "upperLimit": 4
+          },
+          "status": "ENERGY SAVING",
+          "value": 1
+        },
+        "@MODECONFIG": {
+          "constraints": {
+            "bgcolor": "#008000",
+            "enumText": ["Off           ", "Energy Saver  ", "Heat Pump     ", "High Demand   ", "Electric      "],
+            "enumTextIcon": [],
+            "fontcolor": "#FFFFFF",
+            "icon": "ic_energy_saver",
+            "lowerLimit": 0,
+            "upperLimit": 4
+          },
+          "status": "",
+          "value": ""
+        },
+        "@MODEIMAGE": "ic_energy_saver.png",
+        "@NAME": {
+          "constraints": {
+            "stringLength": 64
+          },
+          "value": "Water Heater"
+        },
+        "@RESUME": false,
+        "@RUNNING": "Running",
+        "@SCHEDULE": false,
+        "@SCHEDULERESUME": "",
+        "@SCHEDULESTATUS": "",
+        "@SETPOINT": {
+          "constraints": {
+            "error": [],
+            "formatDecimal": 0,
+            "isConversion": true,
+            "lowerLimit": 110,
+            "units": "deg F",
+            "upperLimit": 140,
+            "warning": [{
+              "message": "CAUTION HOT WATER. Contact may cause serious burns to skin",
+              "value": 121
+            }]
+          },
+          "value": 132
+        },
+        "@STATUS": "Enabled ",
+        "@TCONFIG": [{
+          "align": "center",
+          "name": "@MODEIMAGE",
+          "type": "SINGLE_IMAGE_VIEW",
+          "value": "ic_energy_saver.png"
+        }, {
+          "align": "center",
+          "name": "@RUNNING",
+          "type": "TEXT_LABEL_VIEW",
+          "value": "Running"
+        }],
+        "@TYPE": "heatpumpWaterHeaterGen4",
+        "@VACATION": false,
+        "actions": ["networkSettings", "waterheaterUsageReportView", "waterheaterScheduleView"],
+        "device_name": "74901882412345",
+        "device_type": "WH",
+        "serial_number": "Q032012345"
+      }],
+      "location_id": "d89d2c77-ded4-442b-9b40-05f6c12345"
+    }]
+  },
+  "success": true
+}
