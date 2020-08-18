@@ -47,7 +47,7 @@ class Equipment:
                                 if self._equipment_info[key].get("value") is not None:
                                     self._equipment_info[key]["value"] = value
                                     _LOGGER.debug("Updating [%s][value] = %s", key, value)
-                            if not _set:
+                            else:
                                 self._equipment_info[key] = value
                                 _LOGGER.debug("Updating [%s] = %s", key, value)
                     except Exception:
