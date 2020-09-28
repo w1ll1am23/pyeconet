@@ -1,7 +1,9 @@
 # Change log
 
-## 0.1.4
+## 0.1.5
+- Renamed equipments to equipment
 
+## 0.1.4
 - Move to the new API and MQTT push update system
 
 ## 0.0.12

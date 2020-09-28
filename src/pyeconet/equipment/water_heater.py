@@ -22,6 +22,9 @@ class WaterHeaterOperationMode(Enum):
     GAS = 6
     ENERGY_SAVER = 7
     PERFORMANCE = 8
+    VACATION = 9
+    ELECTRIC = 10
+    HEAT_PUMP = 11
     UNKNOWN = 99
 
     @staticmethod
@@ -45,6 +48,14 @@ class WaterHeaterOperationMode(Enum):
             return WaterHeaterOperationMode.ENERGY_SAVING
         elif _cleaned_string == WaterHeaterOperationMode.PERFORMANCE.name.upper():
             return WaterHeaterOperationMode.PERFORMANCE
+        elif _cleaned_string == WaterHeaterOperationMode.VACATION.name.upper():
+            return WaterHeaterOperationMode.VACATION
+        elif _cleaned_string == WaterHeaterOperationMode.ELECTRIC.name.upper():
+            # Treat ELECTRIC MODE and ELECTRIC modes the same
+            return WaterHeaterOperationMode.ELECTRIC_MODE
+        elif _cleaned_string == WaterHeaterOperationMode.HEAT_PUMP.name.upper():
+            # Treat HEAT PUMP ONLY and HEAT PUMP modes the same
+            return WaterHeaterOperationMode.HEAT_PUMP_ONLY
         else:
             _LOGGER.error("Unknown mode: [%s]", str_value)
             return WaterHeaterOperationMode.UNKNOWN
@@ -106,6 +117,16 @@ class WaterHeater(Equipment):
         """Return the value 0-100? of the tank/heating element health"""
         return self._equipment_info.get("@TANK", {}).get("value")
 
+    @property
+    def compressor_health(self) -> Union[int, None]:
+        """Return the value 0-100 of the compressor for heat pump units health"""
+        return self._equipment_info.get("@COMBUSTION", {}).get("value")
+
+    @property
+    def demand_response_over(self) -> bool:
+        """Return if the demand response is running or not"""
+        return self._equipment_info.get("@VALVE")["value"] == 0
+
     def _supports_modes(self) -> bool:
         """Return if the system supports modes or not"""
         return self._equipment_info.get("@MODE") is not None
@@ -126,7 +147,7 @@ class WaterHeater(Equipment):
                     _supported_modes.append(_op_mode)
         if self._supports_on_off() and not _supported_modes:
             _supported_modes.append(WaterHeaterOperationMode.OFF)
-            if self.generic_type == "gasWaterHeater":
+            if self.generic_type == "gasWaterHeater" or self.generic_type == "tanklessWaterHeater":
                 _supported_modes.append(WaterHeaterOperationMode.GAS)
             else:
                 _supported_modes.append(WaterHeaterOperationMode.ELECTRIC_MODE)
@@ -143,7 +164,7 @@ class WaterHeater(Equipment):
         if self._supports_modes():
             return self.modes[self._equipment_info.get("@MODE")["value"]]
         else:
-            if self.generic_type == "gasWaterHeater":
+            if self.generic_type == "gasWaterHeater" or self.generic_type == "tanklessWaterHeater":
                 return WaterHeaterOperationMode.GAS
             else:
                 return WaterHeaterOperationMode.ELECTRIC_MODE
