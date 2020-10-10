@@ -6,7 +6,7 @@ from enum import Enum
 from typing import List, Union
 
 from pyeconet.errors import InvalidResponseFormat
-from pyeconet.equipments import Equipment
+from pyeconet.equipment import Equipment
 
 _LOGGER = logging.getLogger(__name__)
 
