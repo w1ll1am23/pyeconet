@@ -10,8 +10,8 @@ import time
 import getpass
 
 from pyeconet import EcoNetApiInterface
-from pyeconet.equipments import EquipmentType
-from pyeconet.equipments.water_heater import WaterHeaterOperationMode
+from pyeconet.equipment import EquipmentType
+from pyeconet.equipment.water_heater import WaterHeaterOperationMode
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.DEBUG)

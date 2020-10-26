@@ -1,5 +1,8 @@
 # Change log
 
+## 0.1.7
+- Fixed set heat temp defect
+
 ## 0.1.5
 - Renamed equipments to equipment
 

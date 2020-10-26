@@ -227,7 +227,8 @@ class Thermostat(Equipment):
             else:
                 _LOGGER.error("Cool set point out of range. Lower: %s Upper: %s Cool set point: %s",
                               self.cool_set_point_limits[0], self.cool_set_point_limits[1], _temp)
-        if target_temp_heat:
+        if target_temp_heat or target_temp and self.mode in [ThermostatOperationMode.HEATING,
+                                                             ThermostatOperationMode.EMERGENCY_HEAT]:
             _temp = target_temp if target_temp else target_temp_heat
             if self.heat_set_point_limits[0] <= _temp <= self.heat_set_point_limits[1]:
                 heat_payload["@HEATSETPOINT"] = _temp
@@ -252,4 +253,3 @@ class Thermostat(Equipment):
             else:
                 _LOGGER.error("Can't auto determine set point to set when mode is: %s", self.mode)
             self._api.publish(payload, self.device_id, self.serial_number)
-

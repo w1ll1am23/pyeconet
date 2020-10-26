@@ -6,7 +6,7 @@ from enum import Enum
 from typing import List, Union
 
 from pyeconet.errors import InvalidResponseFormat
-from pyeconet.equipments import Equipment
+from pyeconet.equipment import Equipment
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,13 +94,13 @@ class WaterHeater(Equipment):
         if icon is None:
             _LOGGER.debug("Tank does not support hot water capacity")
             return None
-        if icon == "ic_tank_hundread_percent.png":
+        if "ic_tank_hundread_percent" in icon:
             value = 100
-        elif icon == "ic_tank_fourty_percent.png":
+        elif "ic_tank_fourty_percent" in icon:
             value = 40
-        elif icon == "ic_tank_ten_percent.png":
+        elif "ic_tank_ten_percent" in icon:
             value = 10
-        elif icon == "ic_tank_empty.png":
+        elif "ic_tank_empty" in icon:
             # Tank is empty when shutoff valve is closed
             value = 0
         else:
