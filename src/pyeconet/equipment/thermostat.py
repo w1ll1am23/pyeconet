@@ -2,7 +2,7 @@
 
 import logging
 from enum import Enum
-from typing import Tuple, Union, List
+from typing import Tuple, Union, List, Optional
 
 from . import Equipment
 
@@ -90,6 +90,10 @@ class Thermostat(Equipment):
             return False
 
     @property
+    def supports_humidifier(self) -> bool:
+        return self._equipment_info.get("@DEHUMENABLE").get("constraints") is not None
+
+    @property
     def cool_set_point(self) -> int:
         """Return the current cool set point"""
         return self._equipment_info.get("@COOLSETPOINT")["value"]
@@ -124,8 +128,9 @@ class Thermostat(Equipment):
     def dehumidifier_set_point(self) -> int:
         return self._equipment_info.get("@DEHUMSETPOINT")["value"]
 
+
     @property
-    def dehumidifier_set_point_limits(self) -> Tuple:
+    def dehumidifier_set_point_limits(self) -> Tuple[int, int]:
         """Returns a tuple of the lower limit and upper limit for the dehumidifier set point"""
         set_point = self._equipment_info.get("@DEHUMSETPOINT")["constraints"]
         return set_point["lowerLimit"], set_point["upperLimit"]

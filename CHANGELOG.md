@@ -1,5 +1,8 @@
 # Change log
 
+## 0.1.8
+- HVAC humidity updates
+
 ## 0.1.7
 - Fixed set heat temp defect
 
