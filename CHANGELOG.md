@@ -1,5 +1,8 @@
 # Change log
 
+## 0.1.9
+- Update to water heater tank capacity (new file names)
+
 ## 0.1.8
 - HVAC humidity updates
 

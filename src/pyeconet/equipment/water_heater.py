@@ -100,7 +100,7 @@ class WaterHeater(Equipment):
             value = 40
         elif "ic_tank_ten_percent" in icon:
             value = 10
-        elif "ic_tank_empty" in icon:
+        elif "ic_tank_empty" in icon or "ic_tank_zero_percent" in icon:
             # Tank is empty when shutoff valve is closed
             value = 0
         else:

@@ -128,7 +128,6 @@ class Thermostat(Equipment):
     def dehumidifier_set_point(self) -> int:
         return self._equipment_info.get("@DEHUMSETPOINT")["value"]
 
-
     @property
     def dehumidifier_set_point_limits(self) -> Tuple[int, int]:
         """Returns a tuple of the lower limit and upper limit for the dehumidifier set point"""
