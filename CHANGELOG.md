@@ -1,5 +1,8 @@
 # Change log
 
+## 0.1.10
+- Added water heater water usage
+
 ## 0.1.9
 - Update to water heater tank capacity (new file names)
 

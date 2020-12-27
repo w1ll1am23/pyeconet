@@ -67,6 +67,7 @@ class WaterHeater(Equipment):
         """Initialize."""
         super().__init__(equipment_info, api_interface)
         self.energy_usage = None
+        self.water_usage = None
 
     @property
     def leak_installed(self) -> bool:
@@ -180,7 +181,6 @@ class WaterHeater(Equipment):
             # Unit doesn't support on/off or modes
             return None
 
-
     @property
     def override_status(self) -> str:
         """Return the alert override status"""
@@ -189,6 +189,10 @@ class WaterHeater(Equipment):
     @property
     def todays_energy_usage(self) -> Union[float, None]:
         return self.energy_usage
+
+    @property
+    def todays_water_usage(self) -> Union[float, None]:
+        return self.water_usage
 
     async def get_energy_usage(self):
         """Call dynamic action for energy usage."""
@@ -214,6 +218,32 @@ class WaterHeater(Equipment):
         for value in _response["results"]["energy_usage"]["data"]:
             _todays_usage += value["value"]
         self.energy_usage = _todays_usage
+        _LOGGER.debug(_todays_usage)
+
+    async def get_water_usage(self):
+        """Call dynamic action for water usage."""
+        date = datetime.now()
+        payload = {
+            "ACTION": "waterheaterUsageReportView",
+            "device_name": f"{self.device_id}",
+            "serial_number": f"{self.serial_number}",
+            "graph_data": {
+                "format": "daily",
+                "month": f"{date.month}",
+                "period": f"{date.day}",
+                "year": f"{date.year}"
+            },
+            "usage_type": "waterUsage"
+        }
+        try:
+            _response = await self._api.get_dynamic_action(payload)
+        except InvalidResponseFormat:
+            _LOGGER.debug("Tried to get water usage, but unit doesn't support it.")
+            return
+        _todays_usage = 0
+        for value in _response["results"]["water_usage"]["data"]:
+            _todays_usage += value["value"]
+        self.water_usage = _todays_usage
         _LOGGER.debug(_todays_usage)
 
     def set_mode(self, mode: WaterHeaterOperationMode):
