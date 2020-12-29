@@ -67,6 +67,7 @@ class WaterHeater(Equipment):
         """Initialize."""
         super().__init__(equipment_info, api_interface)
         self.energy_usage = None
+        self._energy_type = None
         self.water_usage = None
 
     @property
@@ -191,6 +192,11 @@ class WaterHeater(Equipment):
         return self.energy_usage
 
     @property
+    def energy_type(self) -> str:
+        """Return the energy type returned from the energy usage response."""
+        return self._energy_type
+
+    @property
     def todays_water_usage(self) -> Union[float, None]:
         return self.water_usage
 
@@ -218,6 +224,14 @@ class WaterHeater(Equipment):
         for value in _response["results"]["energy_usage"]["data"]:
             _todays_usage += value["value"]
         self.energy_usage = _todays_usage
+        try:
+            self._energy_type = _response["results"]["energy_usage"]["message"].split(" ")[3].upper()
+        except (KeyError, IndexError):
+            _LOGGER.error("Failed to determine energy type from response.")
+            if self.generic_type == "gasWaterHeater":
+                self._energy_type == "KBTU"
+            else:
+                self._energy_type == "KWH"
         _LOGGER.debug(_todays_usage)
 
     async def get_water_usage(self):

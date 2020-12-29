@@ -31,7 +31,7 @@ class EcoNetApiInterface:
     API interface object.
     """
 
-    def __init__(self, email: str, password: str, session: ClientSession, account_id: str = None,
+    def __init__(self, email: str, password: str, account_id: str = None,
                  user_token: str = None) -> None:
         """
         Create the EcoNet API interface object.
@@ -47,7 +47,6 @@ class EcoNetApiInterface:
         self._locations: List = []
         self._equipment: Dict = {}
         self._mqtt_client = None
-        self._session: ClientSession = session
 
     @property
     def user_token(self) -> str:
@@ -69,8 +68,7 @@ class EcoNetApiInterface:
             password (str): EcoNet account password.
 
         """
-        session = ClientSession()
-        this_class = cls(email, password, session)
+        this_class = cls(email, password)
         await this_class._authenticate(
             {"email": email, "password": password}
         )
@@ -152,9 +150,9 @@ class EcoNetApiInterface:
         _headers = HEADERS
         _headers["ClearBlade-UserToken"] = self._user_token
 
-        session = ClientSession()
+        _session = ClientSession()
         try:
-            async with session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS) as resp:
+            async with _session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
                     _LOGGER.debug(_json)
@@ -168,15 +166,15 @@ class EcoNetApiInterface:
         except ClientError as err:
             raise err
         finally:
-            await session.close()
+            await _session.close()
 
     async def get_dynamic_action(self, payload: Dict) -> Dict:
         _headers = HEADERS
         _headers["ClearBlade-UserToken"] = self._user_token
 
-        session = ClientSession()
+        _session = ClientSession()
         try:
-            async with session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction", json=payload,
+            async with _session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction", json=payload,
                                     headers=HEADERS) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
@@ -190,12 +188,12 @@ class EcoNetApiInterface:
         except ClientError as err:
             raise err
         finally:
-            await session.close()
+            await _session.close()
 
     async def _authenticate(self, payload: dict) -> None:
 
-        session = ClientSession()
-        async with session.post(f"{REST_URL}/user/auth", json=payload, headers=HEADERS) as resp:
+        _session = ClientSession()
+        async with _session.post(f"{REST_URL}/user/auth", json=payload, headers=HEADERS) as resp:
             if resp.status == 200:
                 _json = await resp.json()
                 _LOGGER.debug(_json)
@@ -206,6 +204,7 @@ class EcoNetApiInterface:
                     raise InvalidCredentialsError(_json.get("options")["message"])
             else:
                 raise GenericHTTPError(resp.status)
+        await _session.close()
 
     def _on_connect(self, client, userdata, flags, rc):
         _LOGGER.debug(f"Connected with result code: {str(rc)}")

@@ -1,5 +1,8 @@
 # Change log
 
+## 0.1.11
+- Fixed session error and added water heater energy type
+
 ## 0.1.10
 - Added water heater water usage
 
