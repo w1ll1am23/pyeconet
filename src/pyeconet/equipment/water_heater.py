@@ -89,6 +89,11 @@ class WaterHeater(Equipment):
         return self._equipment_info.get("@RUNNING") != ""
 
     @property
+    def running_state(self) -> str:
+        """Return if the water heater is running or not"""
+        return self._equipment_info.get("@RUNNING")
+
+    @property
     def tank_hot_water_availability(self) -> Union[int, None]:
         """Return the hot water availability"""
         icon = self._equipment_info.get("@HOTWATER")
