@@ -78,7 +78,12 @@ class Thermostat(Equipment):
     @property
     def running(self) -> bool:
         """Return if the thermostat is running or not"""
-        return self._equipment_info.get("@RUNNINGSTATUS") == "Running"
+        return self._equipment_info.get("@RUNNINGSTATUS") != ""
+
+    @property
+    def running_state(self) -> str:
+        """Return the raw running status value"""
+        return self._equipment_info.get("@RUNNINGSTATUS")
 
     @property
     def beep_enabled(self) -> bool:
@@ -176,6 +181,15 @@ class Thermostat(Equipment):
     def mode(self) -> Union[ThermostatOperationMode, None]:
         """Return the current mode"""
         return self.modes[self._equipment_info.get("@MODE")["value"]]
+
+    @property
+    def set_point_limits(self) -> Tuple:
+        """
+        Returns a tuple of the lower limit and upper limit for the set point.
+
+        Thermostat set points are too extream -100 - 200 setting reasonable limits.
+        """
+        return 40, 95
 
     def set_mode(self, mode: ThermostatOperationMode):
         """Set the provided mode"""

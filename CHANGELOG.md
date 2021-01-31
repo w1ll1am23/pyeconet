@@ -1,5 +1,8 @@
 # Change log
 
+## 0.1.13
+- Hard code thermostat set point limits. Fixed running and running_state for thermostats.
+
 ## 0.1.12
 - Added raw running state
 

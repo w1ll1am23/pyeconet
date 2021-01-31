@@ -90,7 +90,7 @@ class WaterHeater(Equipment):
 
     @property
     def running_state(self) -> str:
-        """Return if the water heater is running or not"""
+        """Return the raw running value"""
         return self._equipment_info.get("@RUNNING")
 
     @property
