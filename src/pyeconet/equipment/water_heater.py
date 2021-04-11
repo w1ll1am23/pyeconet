@@ -115,9 +115,11 @@ class WaterHeater(Equipment):
         return value
 
     @property
-    def shutoff_valve_open(self) -> bool:
+    def shutoff_valve_open(self) -> Union[bool, None]:
         """Return if the shutoff valve is open or not"""
-        return self._equipment_info.get("@VALVE")["value"] == 0
+        if self.has_shutoff_valve:
+            return self._equipment_info.get("@VALVE")["value"] == 0
+        return None
 
     @property
     def tank_health(self) -> Union[int, None]:

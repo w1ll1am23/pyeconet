@@ -229,6 +229,12 @@ class EcoNetApiInterface:
             _equipment = self._equipment.get(key)
             if _equipment is not None:
                 _equipment.update_equipment_info(unpacked_json)
+            # Nasty hack to push signal updates to the device it belongs to
+            elif "@SIGNAL" in str(unpacked_json):
+                for _equipment in self._equipment.values():
+                    if _equipment.device_id == _name:
+                        # Don't break after update for multi zone HVAC systems
+                        _equipment.update_equipment_info(unpacked_json)
             else:
                 _LOGGER.debug("Received update for non-existent equipment with device name: %s and serial number %s",
                               _name, _serial)

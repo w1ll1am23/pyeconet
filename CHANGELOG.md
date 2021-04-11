@@ -1,5 +1,9 @@
 # Change log
 
+## 0.1.14
+- Check for shutoff valve before getting status
+- WiFi signal hack
+
 ## 0.1.13
 - Hard code thermostat set point limits. Fixed running and running_state for thermostats.
 

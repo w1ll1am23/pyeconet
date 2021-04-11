@@ -187,7 +187,7 @@ class Thermostat(Equipment):
         """
         Returns a tuple of the lower limit and upper limit for the set point.
 
-        Thermostat set points are too extream -100 - 200 setting reasonable limits.
+        Thermostat set points are too extreme -100 - 200 setting reasonable limits.
         """
         return 40, 95
 
