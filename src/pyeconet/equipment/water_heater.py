@@ -25,12 +25,13 @@ class WaterHeaterOperationMode(Enum):
     VACATION = 9
     ELECTRIC = 10
     HEAT_PUMP = 11
+    ELECTRIC_GAS = 12
     UNKNOWN = 99
 
     @staticmethod
     def by_string(str_value: str):
         """Convert a string to a supported OperationMode"""
-        _cleaned_string = str_value.rstrip().replace(" ", "_").upper()
+        _cleaned_string = str_value.rstrip().replace(" ", "_").replace("/", "_").upper()
         if _cleaned_string == WaterHeaterOperationMode.OFF.name.upper():
             return WaterHeaterOperationMode.OFF
         elif _cleaned_string == WaterHeaterOperationMode.ELECTRIC_MODE.name.upper():
@@ -56,6 +57,9 @@ class WaterHeaterOperationMode(Enum):
         elif _cleaned_string == WaterHeaterOperationMode.HEAT_PUMP.name.upper():
             # Treat HEAT PUMP ONLY and HEAT PUMP modes the same
             return WaterHeaterOperationMode.HEAT_PUMP_ONLY
+        elif _cleaned_string == WaterHeaterOperationMode.ELECTRIC_GAS.name.upper():
+            # Treat ELECTRIC_GAS MODE and ELECTRIC modes the same
+            return WaterHeaterOperationMode.ELECTRIC
         else:
             _LOGGER.error("Unknown mode: [%s]", str_value)
             return WaterHeaterOperationMode.UNKNOWN

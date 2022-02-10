@@ -1,0 +1,295 @@
+{
+  "results": {
+    "locations": [
+      {
+        "@AWAY": false,
+        "@AWAYCONFIG": false,
+        "@LOCATION_INFO": "XXX, XXX",
+        "@LOCATION_NAME": "Home",
+        "@LOCATION_STATUS": "I'm Home",
+        "@VACATION": false,
+        "@VACATIONCONFIG": false,
+        "@WEATHER": "51°",
+        "@WEATHER_F": 51,
+        "@WEATHER_I": "clearn.png",
+        "equiptments": [
+          {
+            "@ACTIVE": true,
+            "@ALERTCOUNT": 0,
+            "@AWAY": false,
+            "@AWAYCONFIG": false,
+            "@AWAY_MSG": "",
+            "@BCONFIG": [
+              {
+                "align": "center",
+                "name": "@SCHEDULESTATUS",
+                "type": "TEXT_LABEL_VIEW",
+                "value": ""
+              },
+              {
+                "name": "@SCHEDULERESUME",
+                "title": "Resume",
+                "type": "BUTTON_VIEW",
+                "value": ""
+              },
+              {
+                "align": "center",
+                "type": "TEXT_LABEL_VIEW",
+                "value": "Hot Water Availability"
+              },
+              {
+                "align": "center",
+                "name": "@HOTWATER",
+                "title": "Hot Water Availability",
+                "type": "SINGLE_IMAGE_VIEW",
+                "value": "ic_tank_hundread_percent_v2.png"
+              }
+            ],
+            "@COMBUSTION": {
+              "constraints": {
+                "formatDecimal": 1,
+                "green": 55,
+                "lowerLimit": 0,
+                "orange": 25,
+                "red": 20,
+                "units": "HRS",
+                "upperLimit": 10000000
+              },
+              "status": "Compressor life is normal",
+              "value": 100
+            },
+            "@CONFIG": [
+              {
+                "align": "center",
+                "name": "@MODECONFIG",
+                "title": "This Equipment should be set to ENERGY SAVING Mode for maximum efficiency",
+                "type": "IMAGE_TEXT_BUTTON_VIEW",
+                "value": {
+                  "constraints": {
+                    "bgcolor": "#008000",
+                    "enumText": [
+                      "Off           ",
+                      "Energy Saver  ",
+                      "Heat Pump     ",
+                      "High Demand   ",
+                      "Electric/Gas  ",
+                      "Vacation      "
+                    ],
+                    "enumTextIcon": [],
+                    "fontcolor": "#FFFFFF",
+                    "icon": "ic_energy_saver",
+                    "lowerLimit": 0,
+                    "upperLimit": 5
+                  },
+                  "status": "Enable",
+                  "value": 1
+                }
+              }
+            ],
+            "@CONNECTED": true,
+            "@DRACTIVE": {
+              "constraints": {
+                "dialog": [
+                  {
+                    "message": "This should not impact the water temperature in your home. Do you want to opt out for this event ?",
+                    "title": "Tank temperature has been changed in response to a Utility Load Control event",
+                    "value": 1
+                  }
+                ]
+              },
+              "value": ""
+            },
+            "@DRESOVER": {
+              "constraints": {
+                "enumText": ["false", "true "],
+                "enumTextIcon": [],
+                "lowerLimit": 0,
+                "upperLimit": 1
+              },
+              "status": "false",
+              "value": 0
+            },
+            "@ENABLED": {
+              "constraints": {
+                "enumText": ["Disabled", "Enabled "],
+                "enumTextIcon": ["ic_device_off.png", "ic_enabled.png"],
+                "lowerLimit": 0,
+                "upperLimit": 1
+              },
+              "status": "Enabled ",
+              "value": 1
+            },
+            "@HOTWATER": "ic_tank_hundread_percent_v2.png",
+            "@JA13STATUS": "",
+            "@LEAKINSTALLED": {
+              "constraints": {
+                "align": "center",
+                "bgcolor": "#bec2bf",
+                "enumText": ["No ", "Yes"],
+                "enumTextIcon": [],
+                "fontcolor": "#000000",
+                "lowerLimit": 0,
+                "upperLimit": 1
+              },
+              "status": "",
+              "title": "Leak sensor not installed",
+              "value": 0
+            },
+            "@MODE": {
+              "constraints": {
+                "enumText": [
+                  "Off           ",
+                  "Energy Saver  ",
+                  "Heat Pump     ",
+                  "High Demand   ",
+                  "Electric/Gas  ",
+                  "Vacation      "
+                ],
+                "enumTextIcon": [
+                  "ic_device_off.png",
+                  "ic_energy_saver.png",
+                  "ic_heat_pump.png",
+                  "ic_high_demand.png",
+                  "http://heaticon.png",
+                  "ic_vacation.png"
+                ],
+                "lowerLimit": 0,
+                "upperLimit": 5
+              },
+              "status": "High Demand   ",
+              "value": 3
+            },
+            "@MODECONFIG": {
+              "constraints": {
+                "bgcolor": "#008000",
+                "enumText": [
+                  "Off           ",
+                  "Energy Saver  ",
+                  "Heat Pump     ",
+                  "High Demand   ",
+                  "Electric/Gas  ",
+                  "Vacation      "
+                ],
+                "enumTextIcon": [],
+                "fontcolor": "#FFFFFF",
+                "icon": "ic_energy_saver",
+                "lowerLimit": 0,
+                "upperLimit": 5
+              },
+              "status": "Enable",
+              "value": 1
+            },
+            "@MODEIMAGE": "",
+            "@NAME": {
+              "constraints": {
+                "stringLength": 64
+              },
+              "value": "Heat Pump Water Heater"
+            },
+            "@OVERRIDE": {
+              "constraints": {
+                "bgcolor": "#FFFF00",
+                "fontcolor": "#000000",
+                "icon": "ic_high_level_alert.png"
+              },
+              "status": "",
+              "value": ""
+            },
+            "@OVERRIDESTATUS": "",
+            "@RESUME": false,
+            "@RUNNING": "Compressor Running",
+            "@SCHEDULE": false,
+            "@SCHEDULERESUME": "",
+            "@SCHEDULESTATUS": "",
+            "@SETPOINT": {
+              "constraints": {
+                "error": [],
+                "formatDecimal": 0,
+                "isConversion": true,
+                "lowerLimit": 110,
+                "units": "deg F",
+                "upperLimit": 140,
+                "warning": [
+                  {
+                    "message": "CAUTION HOT WATER. Contact may cause serious burns to skin",
+                    "value": 121
+                  }
+                ]
+              },
+              "value": 120
+            },
+            "@STATUS": "Enabled ",
+            "@TANK": {
+              "constraints": {
+                "green": 40,
+                "orange": 30,
+                "red": 30
+              },
+              "status": "Element operating normally",
+              "value": 100
+            },
+            "@TCONFIG": [
+              {
+                "align": "center",
+                "name": "@MODEIMAGE",
+                "type": "SINGLE_IMAGE_VIEW",
+                "value": ""
+              },
+              {
+                "align": "center",
+                "name": "@RUNNING",
+                "type": "TEXT_LABEL_VIEW",
+                "value": "Compressor Running"
+              },
+              {
+                "align": "center",
+                "name": "@OVERRIDESTATUS",
+                "type": "TEXT_LABEL_VIEW",
+                "value": ""
+              }
+            ],
+            "@TYPE": "heatpumpWaterHeaterGen5",
+            "@VACATION": false,
+            "@VALVE": {
+              "constraints": {
+                "dialog": [
+                  {
+                    "message": "Closing the shut off valve will disable the water heater",
+                    "title": "Closing Valve",
+                    "value": 0
+                  }
+                ],
+                "error": []
+              },
+              "value": ""
+            },
+            "@VALVESTATUS": {
+              "constraints": {
+                "align": "center",
+                "bgcolor": "#bec2bf",
+                "fontcolor": "#000000"
+              },
+              "status": "",
+              "title": "Shut-OFF Valve not installed",
+              "value": 1
+            },
+            "actions": [
+              "waterheaterScheduleView",
+              "networkSettings",
+              "waterheaterUsageReportView",
+              "waterheaterHealthView"
+            ],
+            "device_name": "",
+            "device_type": "WH",
+            "mac_address": "",
+            "serial_number": ""
+          }
+        ],
+        "location_id": ""
+      }
+    ]
+  },
+  "success": true,
+  "logs": "",
+  "stack": ""
+}
