@@ -59,7 +59,7 @@ class WaterHeaterOperationMode(Enum):
             return WaterHeaterOperationMode.HEAT_PUMP_ONLY
         elif _cleaned_string == WaterHeaterOperationMode.ELECTRIC_GAS.name.upper():
             # Treat ELECTRIC_GAS MODE and ELECTRIC modes the same
-            return WaterHeaterOperationMode.ELECTRIC
+            return WaterHeaterOperationMode.ELECTRIC_GAS
         else:
             _LOGGER.error("Unknown mode: [%s]", str_value)
             return WaterHeaterOperationMode.UNKNOWN
@@ -157,7 +157,13 @@ class WaterHeater(Equipment):
             for _mode in _modes:
                 _op_mode = WaterHeaterOperationMode.by_string(_mode)
                 if _op_mode is not WaterHeaterOperationMode.UNKNOWN:
-                    _supported_modes.append(_op_mode)
+                    if _op_mode is WaterHeaterOperationMode.ELECTRIC_GAS:
+                        if self.generic_type == "gasWaterHeater" or self.generic_type == "tanklessWaterHeater":
+                            _supported_modes.append(WaterHeaterOperationMode.GAS)
+                        else:
+                            _supported_modes.append(WaterHeaterOperationMode.ELECTRIC_MODE)
+                    else:
+                        _supported_modes.append(_op_mode)
         if self._supports_on_off() and not _supported_modes:
             _supported_modes.append(WaterHeaterOperationMode.OFF)
             if self.generic_type == "gasWaterHeater" or self.generic_type == "tanklessWaterHeater":
