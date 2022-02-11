@@ -58,7 +58,6 @@ class WaterHeaterOperationMode(Enum):
             # Treat HEAT PUMP ONLY and HEAT PUMP modes the same
             return WaterHeaterOperationMode.HEAT_PUMP_ONLY
         elif _cleaned_string == WaterHeaterOperationMode.ELECTRIC_GAS.name.upper():
-            # Treat ELECTRIC_GAS MODE and ELECTRIC modes the same
             return WaterHeaterOperationMode.ELECTRIC_GAS
         else:
             _LOGGER.error("Unknown mode: [%s]", str_value)
