@@ -25,12 +25,13 @@ class WaterHeaterOperationMode(Enum):
     VACATION = 9
     ELECTRIC = 10
     HEAT_PUMP = 11
+    ELECTRIC_GAS = 12
     UNKNOWN = 99
 
     @staticmethod
     def by_string(str_value: str):
         """Convert a string to a supported OperationMode"""
-        _cleaned_string = str_value.rstrip().replace(" ", "_").upper()
+        _cleaned_string = str_value.rstrip().replace(" ", "_").replace("/", "_").upper()
         if _cleaned_string == WaterHeaterOperationMode.OFF.name.upper():
             return WaterHeaterOperationMode.OFF
         elif _cleaned_string == WaterHeaterOperationMode.ELECTRIC_MODE.name.upper():
@@ -56,6 +57,8 @@ class WaterHeaterOperationMode(Enum):
         elif _cleaned_string == WaterHeaterOperationMode.HEAT_PUMP.name.upper():
             # Treat HEAT PUMP ONLY and HEAT PUMP modes the same
             return WaterHeaterOperationMode.HEAT_PUMP_ONLY
+        elif _cleaned_string == WaterHeaterOperationMode.ELECTRIC_GAS.name.upper():
+            return WaterHeaterOperationMode.ELECTRIC_GAS
         else:
             _LOGGER.error("Unknown mode: [%s]", str_value)
             return WaterHeaterOperationMode.UNKNOWN
@@ -153,7 +156,13 @@ class WaterHeater(Equipment):
             for _mode in _modes:
                 _op_mode = WaterHeaterOperationMode.by_string(_mode)
                 if _op_mode is not WaterHeaterOperationMode.UNKNOWN:
-                    _supported_modes.append(_op_mode)
+                    if _op_mode is WaterHeaterOperationMode.ELECTRIC_GAS:
+                        if self.generic_type == "gasWaterHeater" or self.generic_type == "tanklessWaterHeater":
+                            _supported_modes.append(WaterHeaterOperationMode.GAS)
+                        else:
+                            _supported_modes.append(WaterHeaterOperationMode.ELECTRIC_MODE)
+                    else:
+                        _supported_modes.append(_op_mode)
         if self._supports_on_off() and not _supported_modes:
             _supported_modes.append(WaterHeaterOperationMode.OFF)
             if self.generic_type == "gasWaterHeater" or self.generic_type == "tanklessWaterHeater":
