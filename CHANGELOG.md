@@ -1,5 +1,8 @@
 # Change log
 
+## 0.1.15
+- Added support for Gen 5 water heaters
+
 ## 0.1.14
 - Check for shutoff valve before getting status
 - WiFi signal hack
