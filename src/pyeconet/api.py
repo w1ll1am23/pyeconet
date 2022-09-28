@@ -18,8 +18,11 @@ HOST = "rheem.clearblade.com"
 REST_URL = f"https://{HOST}/api/v/1"
 CLEAR_BLADE_SYSTEM_KEY = "e2e699cb0bb0bbb88fc8858cb5a401"
 CLEAR_BLADE_SYSTEM_SECRET = "E2E699CB0BE6C6FADDB1B0BC9A20"
-HEADERS = {"ClearBlade-SystemKey": CLEAR_BLADE_SYSTEM_KEY, "ClearBlade-SystemSecret": CLEAR_BLADE_SYSTEM_SECRET,
-           "Content-Type": "application/json; charset=UTF-8"}
+HEADERS = {
+    "ClearBlade-SystemKey": CLEAR_BLADE_SYSTEM_KEY,
+    "ClearBlade-SystemSecret": CLEAR_BLADE_SYSTEM_SECRET,
+    "Content-Type": "application/json; charset=UTF-8"
+}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -174,17 +177,19 @@ class EcoNetApiInterface:
 
         _session = ClientSession()
         try:
-            async with _session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction", json=payload,
-                                    headers=HEADERS) as resp:
+            async with _session.post(
+                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction", json=payload,
+                headers=HEADERS
+            ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
                     _LOGGER.debug(_json)
                     if _json.get("success"):
                         return _json
-                    else:
-                        raise InvalidResponseFormat()
-                else:
-                    raise GenericHTTPError(resp.status)
+
+                    raise InvalidResponseFormat()
+
+                raise GenericHTTPError(resp.status)
         except ClientError as err:
             raise err
         finally:

@@ -2,16 +2,23 @@
 
 from datetime import datetime
 import logging
-from enum import Enum
-from typing import List, Union
+import enum
+from typing import List, Union, Optional, Dict
 
 from pyeconet.errors import InvalidResponseFormat
 from pyeconet.equipment import Equipment
 
 _LOGGER = logging.getLogger(__name__)
 
+try:
+    from enum import StrEnum
+except ImportError:
+    class StrEnum(str, enum.Enum):
+        pass
 
-class WaterHeaterOperationMode(Enum):
+
+@enum.unique
+class WaterHeaterOperationMode(enum.IntEnum):
     """Define the operation mode"""
 
     OFF = 1
@@ -64,12 +71,20 @@ class WaterHeaterOperationMode(Enum):
             return WaterHeaterOperationMode.UNKNOWN
 
 
-class WaterHeater(Equipment):
+@enum.unique
+class UsageFormat(StrEnum):
+    DAILY = 'daily'
+    WEEKLY = 'weekly'
+    YEARLY = 'yearly'
+    MONTHLY = 'monthly'
 
+
+class WaterHeater(Equipment):
     def __init__(self, equipment_info: dict, api_interface) -> None:
         """Initialize."""
         super().__init__(equipment_info, api_interface)
-        self.energy_usage = None
+        self._energy_usage = None
+        self._historical_energy_usage = None
         self._energy_type = None
         self.water_usage = None
 
@@ -204,8 +219,12 @@ class WaterHeater(Equipment):
         return self._equipment_info.get("@OVERRIDESTATUS")
 
     @property
-    def todays_energy_usage(self) -> Union[float, None]:
-        return self.energy_usage
+    def energy_usage(self) -> Dict[int, float]:
+        return self._energy_usage
+
+    @property
+    def historical_energy_usage(self) -> Dict[int, float]:
+        return self._historical_energy_usage
 
     @property
     def energy_type(self) -> str:
@@ -216,17 +235,30 @@ class WaterHeater(Equipment):
     def todays_water_usage(self) -> Union[float, None]:
         return self.water_usage
 
-    async def get_energy_usage(self):
+    async def get_energy_usage(
+        self, usage_format: UsageFormat = UsageFormat.DAILY,
+        month: Optional[str] = None, period: Optional[int] = None
+    ):
         """Call dynamic action for energy usage."""
         date = datetime.now()
+
+        if month is None:
+            month = date.month
+
+        if period is None:
+            if usage_format in {'usage', 'yearly'}:
+                period = 1
+            else:
+                period = date.day
+
         payload = {
             "ACTION": "waterheaterUsageReportView",
             "device_name": f"{self.device_id}",
             "serial_number": f"{self.serial_number}",
             "graph_data": {
-                "format": "daily",
-                "month": f"{date.month}",
-                "period": f"{date.day}",
+                "format": f"{usage_format}",
+                "month": month,
+                "period": period,
                 "year": f"{date.year}"
             },
             "usage_type": "energyUsage"
@@ -236,19 +268,25 @@ class WaterHeater(Equipment):
         except InvalidResponseFormat:
             _LOGGER.debug("Tried to get energy usage, but unit doesn't support it.")
             return
-        _todays_usage = 0
-        for value in _response["results"]["energy_usage"]["data"]:
-            _todays_usage += value["value"]
-        self.energy_usage = _todays_usage
+        self._energy_usage = {
+            int(item['name']): item['value']
+            for item in _response["results"]["energy_usage"]["data"]
+        }
+        self._historical_energy_usage = {
+            int(item['name']): item['value']
+            for item in _response["results"]["energy_usage"]["historyData"]
+        }
+
         try:
             self._energy_type = _response["results"]["energy_usage"]["message"].split(" ")[3].upper()
         except (KeyError, IndexError):
             _LOGGER.error("Failed to determine energy type from response.")
             if self.generic_type == "gasWaterHeater":
-                self._energy_type == "KBTU"
+                self._energy_type = "KBTU"
             else:
-                self._energy_type == "KWH"
-        _LOGGER.debug(_todays_usage)
+                self._energy_type = "KWH"
+
+        _LOGGER.debug(self._energy_usage)
 
     async def get_water_usage(self):
         """Call dynamic action for water usage."""
