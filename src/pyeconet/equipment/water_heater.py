@@ -237,10 +237,13 @@ class WaterHeater(Equipment):
 
     async def get_energy_usage(
         self, usage_format: UsageFormat = UsageFormat.DAILY,
-        month: Optional[str] = None, period: Optional[int] = None
+        year: Optional[int] = None, month: Optional[int] = None, period: Optional[int] = None
     ):
         """Call dynamic action for energy usage."""
         date = datetime.now()
+
+        if year is None:
+            year = date.year
 
         if month is None:
             month = date.month
@@ -259,7 +262,7 @@ class WaterHeater(Equipment):
                 "format": f"{usage_format}",
                 "month": month,
                 "period": period,
-                "year": f"{date.year}"
+                "year": year
             },
             "usage_type": "energyUsage"
         }
