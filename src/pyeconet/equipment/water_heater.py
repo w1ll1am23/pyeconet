@@ -317,35 +317,39 @@ class WaterHeater(Equipment):
         self.water_usage = _todays_usage
         _LOGGER.debug(_todays_usage)
 
-    def set_mode(self, mode: WaterHeaterOperationMode):
+    def set_mode(self, new_mode: WaterHeaterOperationMode):
         """Set the provided mode or enable/disable if mode isn't support."""
         payload = {}
-        if self._supports_modes() and self._supports_on_off():
-            if mode == WaterHeaterOperationMode.OFF:
-                payload["@ENABLED"] = 0
-            else:
-                if self._supports_on_off():
-                    payload["@ENABLED"] = 1
-                text_modes = self._equipment_info["@MODE"]["constraints"]["enumText"]
-                count = 0
-                for text_mode in text_modes:
-                    if mode == WaterHeaterOperationMode.by_string(text_mode):
-                        payload["@MODE"] = count
-                    count = count + 1
-        elif self._supports_modes():
-            text_modes = self._equipment_info["@MODE"]["constraints"]["enumText"]
-            count = 0
-            for text_mode in text_modes:
-                if mode == WaterHeaterOperationMode.by_string(text_mode):
-                    payload["@MODE"] = count
-                count = count + 1
-        elif self._supports_on_off():
-            if mode == WaterHeaterOperationMode.OFF:
+
+        if not ( self._supports_on_off() or self._supports_modes() ):
+            _LOGGER.error("Unit doesn't support on off or modes, shouldn't be trying to set a mode.")
+            return
+
+        if self._supports_on_off():
+            if new_mode == WaterHeaterOperationMode.OFF:
                 payload["@ENABLED"] = 0
             else:
                 payload["@ENABLED"] = 1
-        else:
-            _LOGGER.error("Unit doesn't support on off or modes, shouldn't being trying to set a mode.")
+
+        # Traverse the supported mode strings returned from the water heater
+        # and set the payload to the index value of the one we want
+        if self._supports_modes():
+            text_modes = self._equipment_info["@MODE"]["constraints"]["enumText"]
+            count = 0
+            for text_mode in text_modes:
+                candidate_mode = WaterHeaterOperationMode.by_string(text_mode)
+                if new_mode == candidate_mode:
+                    payload["@MODE"] = count
+                elif candidate_mode == WaterHeaterOperationMode.ELECTRIC_GAS:
+                    if new_mode == WaterHeaterOperationMode.ELECTRIC_MODE:
+                        payload["@MODE"] = count
+                    elif new_mode == WaterHeaterOperationMode.GAS:
+                        payload["@MODE"] = count
+                count = count + 1
+
+            if not "@MODE" in payload:
+                _LOGGER.error("Could not find a matching mode string to set.")
+
         if payload:
             self._api.publish(payload, self.device_id, self.serial_number)
 
