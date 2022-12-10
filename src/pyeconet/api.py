@@ -5,7 +5,12 @@ import json
 from typing import Type, TypeVar, List, Dict, Optional
 import logging
 
-from pyeconet.errors import PyeconetError, InvalidCredentialsError, GenericHTTPError, InvalidResponseFormat
+from pyeconet.errors import (
+    PyeconetError,
+    InvalidCredentialsError,
+    GenericHTTPError,
+    InvalidResponseFormat,
+)
 from pyeconet.equipment import Equipment, EquipmentType
 from pyeconet.equipment.water_heater import WaterHeater
 from pyeconet.equipment.thermostat import Thermostat
@@ -21,7 +26,7 @@ CLEAR_BLADE_SYSTEM_SECRET = "E2E699CB0BE6C6FADDB1B0BC9A20"
 HEADERS = {
     "ClearBlade-SystemKey": CLEAR_BLADE_SYSTEM_KEY,
     "ClearBlade-SystemSecret": CLEAR_BLADE_SYSTEM_SECRET,
-    "Content-Type": "application/json; charset=UTF-8"
+    "Content-Type": "application/json; charset=UTF-8",
 }
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,8 +39,9 @@ class EcoNetApiInterface:
     API interface object.
     """
 
-    def __init__(self, email: str, password: str, account_id: str = None,
-                 user_token: str = None) -> None:
+    def __init__(
+        self, email: str, password: str, account_id: str = None, user_token: str = None
+    ) -> None:
         """
         Create the EcoNet API interface object.
         Args:
@@ -62,9 +68,7 @@ class EcoNetApiInterface:
         return self._account_id
 
     @classmethod
-    async def login(cls: Type[ApiType],
-                    email: str,
-                    password: str) -> ApiType:
+    async def login(cls: Type[ApiType], email: str, password: str) -> ApiType:
         """Create an EcoNetApiInterface object using email and password
         Args:
             email (str): EcoNet account email address.
@@ -72,22 +76,35 @@ class EcoNetApiInterface:
 
         """
         this_class = cls(email, password)
-        await this_class._authenticate(
-            {"email": email, "password": password}
-        )
+        await this_class._authenticate({"email": email, "password": password})
         return this_class
 
     def subscribe(self):
         """Subscribe to the MQTT updates"""
         if not self._equipment:
-            _LOGGER.error("Equipment list is empty, did you call get_equipment before subscribing?")
+            _LOGGER.error(
+                "Equipment list is empty, did you call get_equipment before subscribing?"
+            )
             return False
 
-        self._mqtt_client = mqtt.Client(self._get_client_id(), clean_session=True, userdata=None, protocol=mqtt.MQTTv311)
-        self._mqtt_client.username_pw_set(self._user_token, password=CLEAR_BLADE_SYSTEM_KEY)
+        self._mqtt_client = mqtt.Client(
+            self._get_client_id(),
+            clean_session=True,
+            userdata=None,
+            protocol=mqtt.MQTTv311,
+        )
+        self._mqtt_client.username_pw_set(
+            self._user_token, password=CLEAR_BLADE_SYSTEM_KEY
+        )
         self._mqtt_client.enable_logger()
-        self._mqtt_client.tls_set(ca_certs=None, certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED,
-                                  tls_version=ssl.PROTOCOL_TLS, ciphers=None)
+        self._mqtt_client.tls_set(
+            ca_certs=None,
+            certfile=None,
+            keyfile=None,
+            cert_reqs=ssl.CERT_REQUIRED,
+            tls_version=ssl.PROTOCOL_TLS,
+            ciphers=None,
+        )
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_message = self._on_message
         self._mqtt_client.on_disconnect = self._on_disconnect
@@ -98,9 +115,16 @@ class EcoNetApiInterface:
         """Publish payload to the specified topic"""
         date_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         transaction_id = f"ANDROID_{date_time}"
-        publish_payload = {"transactionId": transaction_id, "device_name": device_id, "serial_number": serial_number}
+        publish_payload = {
+            "transactionId": transaction_id,
+            "device_name": device_id,
+            "serial_number": serial_number,
+        }
         publish_payload.update(payload)
-        self._mqtt_client.publish(f"user/{self._account_id}/device/desired", payload=json.dumps(publish_payload))
+        self._mqtt_client.publish(
+            f"user/{self._account_id}/device/desired",
+            payload=json.dumps(publish_payload),
+        )
 
     def unsubscribe(self) -> None:
         self._mqtt_client.loop_stop(force=True)
@@ -116,10 +140,16 @@ class EcoNetApiInterface:
             # They spelled it wrong...
             for _equip in _location.get("equiptments"):
                 _equip_obj: Equipment = None
-                if Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.WATER_HEATER:
+                if (
+                    Equipment._coerce_type_from_string(_equip.get("device_type"))
+                    == EquipmentType.WATER_HEATER
+                ):
                     _equip_obj = WaterHeater(_equip, self)
                     self._equipment[_equip_obj.serial_number] = _equip_obj
-                elif Equipment._coerce_type_from_string(_equip.get("device_type")) == EquipmentType.THERMOSTAT:
+                elif (
+                    Equipment._coerce_type_from_string(_equip.get("device_type"))
+                    == EquipmentType.THERMOSTAT
+                ):
                     _equip_obj = Thermostat(_equip, self)
                     self._equipment[_equip_obj.serial_number] = _equip_obj
                     for zoning_device in _equip.get("zoning_devices", []):
@@ -155,7 +185,9 @@ class EcoNetApiInterface:
 
         _session = ClientSession()
         try:
-            async with _session.post(f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS) as resp:
+            async with _session.post(
+                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS
+            ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
                     _LOGGER.debug(_json)
@@ -178,8 +210,9 @@ class EcoNetApiInterface:
         _session = ClientSession()
         try:
             async with _session.post(
-                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction", json=payload,
-                headers=HEADERS
+                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
+                json=payload,
+                headers=HEADERS,
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
@@ -198,7 +231,9 @@ class EcoNetApiInterface:
     async def _authenticate(self, payload: dict) -> None:
 
         _session = ClientSession()
-        async with _session.post(f"{REST_URL}/user/auth", json=payload, headers=HEADERS) as resp:
+        async with _session.post(
+            f"{REST_URL}/user/auth", json=payload, headers=HEADERS
+        ) as resp:
             if resp.status == 200:
                 _json = await resp.json()
                 _LOGGER.debug(_json)
@@ -241,8 +276,11 @@ class EcoNetApiInterface:
                         # Don't break after update for multi zone HVAC systems
                         _equipment.update_equipment_info(unpacked_json)
             else:
-                _LOGGER.debug("Received update for non-existent equipment with device name: %s and serial number %s",
-                              _name, _serial)
+                _LOGGER.debug(
+                    "Received update for non-existent equipment with device name: %s and serial number %s",
+                    _name,
+                    _serial,
+                )
         except Exception as e:
             _LOGGER.exception(e)
             _LOGGER.error("Failed to parse MQTT message: %s", msg.payload)
