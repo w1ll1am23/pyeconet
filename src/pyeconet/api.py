@@ -283,4 +283,4 @@ class EcoNetApiInterface:
                 )
         except Exception as e:
             _LOGGER.exception(e)
-            _LOGGER.error("Failed to parse MQTT message: %s", msg.payload)
+            _LOGGER.error("Failed to parse the following MQTT message: %s", msg.payload)
