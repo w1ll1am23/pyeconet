@@ -21,7 +21,7 @@ jobs:
         if: ${{steps.semantic_release_info.outputs.version != ''}}
         run: |
           echo "Version: ${{steps.semantic_release_info.outputs.version}}"
-          sed -i "s/VERSION = \".*\"/VERSION = \"${{steps.semantic_release_info.outputs.version}}\"/g" src/setup.py
+          sed -i "s/VERSION = \".*\"/VERSION = \"${{steps.semantic_release_info.outputs.version}}\"/g" setup.py
           git config --local user.email "6432770+w1ll1am23@users.noreply.github.com"
           git config --local user.name "William Scanlon"
           git add -A
