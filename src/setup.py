@@ -1,7 +1,9 @@
 from setuptools import setup, find_packages
 
+VERSION = "0.1.15"
+
 setup(name='pyeconet',
-      version='0.1.15',
+      version=VERSION,
       description='Interface to the unofficial EcoNet API',
       url='http://github.com/w1ll1am23/pyeconet',
       author='William Scanlon',
