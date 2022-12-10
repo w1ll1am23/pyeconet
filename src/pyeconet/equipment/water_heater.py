@@ -13,6 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 try:
     from enum import StrEnum
 except ImportError:
+
     class StrEnum(str, enum.Enum):
         pass
 
@@ -73,10 +74,10 @@ class WaterHeaterOperationMode(enum.IntEnum):
 
 @enum.unique
 class UsageFormat(StrEnum):
-    DAILY = 'daily'
-    WEEKLY = 'weekly'
-    YEARLY = 'yearly'
-    MONTHLY = 'monthly'
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    YEARLY = "yearly"
+    MONTHLY = "monthly"
 
 
 class WaterHeater(Equipment):
@@ -172,15 +173,23 @@ class WaterHeater(Equipment):
                 _op_mode = WaterHeaterOperationMode.by_string(_mode)
                 if _op_mode is not WaterHeaterOperationMode.UNKNOWN:
                     if _op_mode is WaterHeaterOperationMode.ELECTRIC_GAS:
-                        if self.generic_type == "gasWaterHeater" or self.generic_type == "tanklessWaterHeater":
+                        if (
+                            self.generic_type == "gasWaterHeater"
+                            or self.generic_type == "tanklessWaterHeater"
+                        ):
                             _supported_modes.append(WaterHeaterOperationMode.GAS)
                         else:
-                            _supported_modes.append(WaterHeaterOperationMode.ELECTRIC_MODE)
+                            _supported_modes.append(
+                                WaterHeaterOperationMode.ELECTRIC_MODE
+                            )
                     else:
                         _supported_modes.append(_op_mode)
         if self._supports_on_off() and not _supported_modes:
             _supported_modes.append(WaterHeaterOperationMode.OFF)
-            if self.generic_type == "gasWaterHeater" or self.generic_type == "tanklessWaterHeater":
+            if (
+                self.generic_type == "gasWaterHeater"
+                or self.generic_type == "tanklessWaterHeater"
+            ):
                 _supported_modes.append(WaterHeaterOperationMode.GAS)
             else:
                 _supported_modes.append(WaterHeaterOperationMode.ELECTRIC_MODE)
@@ -197,7 +206,10 @@ class WaterHeater(Equipment):
         if self._supports_modes():
             return self.modes[self._equipment_info.get("@MODE")["value"]]
         else:
-            if self.generic_type == "gasWaterHeater" or self.generic_type == "tanklessWaterHeater":
+            if (
+                self.generic_type == "gasWaterHeater"
+                or self.generic_type == "tanklessWaterHeater"
+            ):
                 return WaterHeaterOperationMode.GAS
             else:
                 return WaterHeaterOperationMode.ELECTRIC_MODE
@@ -236,8 +248,11 @@ class WaterHeater(Equipment):
         return self.water_usage
 
     async def get_energy_usage(
-        self, usage_format: UsageFormat = UsageFormat.DAILY,
-        year: Optional[int] = None, month: Optional[int] = None, period: Optional[int] = None
+        self,
+        usage_format: UsageFormat = UsageFormat.DAILY,
+        year: Optional[int] = None,
+        month: Optional[int] = None,
+        period: Optional[int] = None,
     ):
         """Call dynamic action for energy usage."""
         date = datetime.now()
@@ -249,7 +264,7 @@ class WaterHeater(Equipment):
             month = date.month
 
         if period is None:
-            if usage_format in {'usage', 'yearly'}:
+            if usage_format in {"usage", "yearly"}:
                 period = 1
             else:
                 period = date.day
@@ -262,9 +277,9 @@ class WaterHeater(Equipment):
                 "format": f"{usage_format}",
                 "month": month,
                 "period": period,
-                "year": year
+                "year": year,
             },
-            "usage_type": "energyUsage"
+            "usage_type": "energyUsage",
         }
         try:
             _response = await self._api.get_dynamic_action(payload)
@@ -272,16 +287,18 @@ class WaterHeater(Equipment):
             _LOGGER.debug("Tried to get energy usage, but unit doesn't support it.")
             return
         self._energy_usage = {
-            int(item['name']): item['value']
+            int(item["name"]): item["value"]
             for item in _response["results"]["energy_usage"]["data"]
         }
         self._historical_energy_usage = {
-            int(item['name']): item['value']
+            int(item["name"]): item["value"]
             for item in _response["results"]["energy_usage"]["historyData"]
         }
 
         try:
-            self._energy_type = _response["results"]["energy_usage"]["message"].split(" ")[3].upper()
+            self._energy_type = (
+                _response["results"]["energy_usage"]["message"].split(" ")[3].upper()
+            )
         except (KeyError, IndexError):
             _LOGGER.error("Failed to determine energy type from response.")
             if self.generic_type == "gasWaterHeater":
@@ -302,9 +319,9 @@ class WaterHeater(Equipment):
                 "format": "daily",
                 "month": f"{date.month}",
                 "period": f"{date.day}",
-                "year": f"{date.year}"
+                "year": f"{date.year}",
             },
-            "usage_type": "waterUsage"
+            "usage_type": "waterUsage",
         }
         try:
             _response = await self._api.get_dynamic_action(payload)
@@ -321,8 +338,10 @@ class WaterHeater(Equipment):
         """Set the provided mode or enable/disable if mode isn't support."""
         payload = {}
 
-        if not ( self._supports_on_off() or self._supports_modes() ):
-            _LOGGER.error("Unit doesn't support on off or modes, shouldn't be trying to set a mode.")
+        if not (self._supports_on_off() or self._supports_modes()):
+            _LOGGER.error(
+                "Unit doesn't support on off or modes, shouldn't be trying to set a mode."
+            )
             return
 
         if self._supports_on_off():
@@ -360,4 +379,9 @@ class WaterHeater(Equipment):
             payload = {"@SETPOINT": set_point}
             self._api.publish(payload, self.device_id, self.serial_number)
         else:
-            _LOGGER.error("Set point out of range. Lower: %s Upper: %s Set point: %s", lower, upper, set_point)
+            _LOGGER.error(
+                "Set point out of range. Lower: %s Upper: %s Set point: %s",
+                lower,
+                upper,
+                set_point,
+            )

@@ -32,9 +32,15 @@ class ThermostatOperationMode(Enum):
             return ThermostatOperationMode.COOLING
         elif _cleaned_string == ThermostatOperationMode.AUTO.name.upper():
             return ThermostatOperationMode.AUTO
-        elif _cleaned_string == ThermostatOperationMode.FAN_ONLY.name.replace("_", "").upper():
+        elif (
+            _cleaned_string
+            == ThermostatOperationMode.FAN_ONLY.name.replace("_", "").upper()
+        ):
             return ThermostatOperationMode.FAN_ONLY
-        elif _cleaned_string == ThermostatOperationMode.EMERGENCY_HEAT.name.replace("_", "").upper():
+        elif (
+            _cleaned_string
+            == ThermostatOperationMode.EMERGENCY_HEAT.name.replace("_", "").upper()
+        ):
             return ThermostatOperationMode.EMERGENCY_HEAT
         else:
             _LOGGER.error("Unknown mode: [%s]", str_value)
@@ -74,7 +80,6 @@ class ThermostatFanMode(Enum):
 
 
 class Thermostat(Equipment):
-
     @property
     def running(self) -> bool:
         """Return if the thermostat is running or not"""
@@ -150,7 +155,12 @@ class Thermostat(Equipment):
             payload = {"@DEHUMSETPOINT": humidity}
             self._api.publish(payload, self.device_id, self.serial_number)
         else:
-            _LOGGER.error("Set point out of range. Lower: %s Upper: %s Humidity set point: %s", lower, upper, humidity)
+            _LOGGER.error(
+                "Set point out of range. Lower: %s Upper: %s Humidity set point: %s",
+                lower,
+                upper,
+                humidity,
+            )
 
     @property
     def zone_id(self) -> Union[str, None]:
@@ -238,36 +248,63 @@ class Thermostat(Equipment):
         """
         cool_payload = {}
         heat_payload = {}
-        if target_temp_cool or target_temp and self.mode == ThermostatOperationMode.COOLING:
+        if (
+            target_temp_cool
+            or target_temp
+            and self.mode == ThermostatOperationMode.COOLING
+        ):
             _temp = target_temp if target_temp else target_temp_cool
             if self.cool_set_point_limits[0] <= _temp <= self.cool_set_point_limits[1]:
                 cool_payload["@COOLSETPOINT"] = _temp
             else:
-                _LOGGER.error("Cool set point out of range. Lower: %s Upper: %s Cool set point: %s",
-                              self.cool_set_point_limits[0], self.cool_set_point_limits[1], _temp)
-        if target_temp_heat or target_temp and self.mode in [ThermostatOperationMode.HEATING,
-                                                             ThermostatOperationMode.EMERGENCY_HEAT]:
+                _LOGGER.error(
+                    "Cool set point out of range. Lower: %s Upper: %s Cool set point: %s",
+                    self.cool_set_point_limits[0],
+                    self.cool_set_point_limits[1],
+                    _temp,
+                )
+        if (
+            target_temp_heat
+            or target_temp
+            and self.mode
+            in [ThermostatOperationMode.HEATING, ThermostatOperationMode.EMERGENCY_HEAT]
+        ):
             _temp = target_temp if target_temp else target_temp_heat
             if self.heat_set_point_limits[0] <= _temp <= self.heat_set_point_limits[1]:
                 heat_payload["@HEATSETPOINT"] = _temp
             else:
-                _LOGGER.error("Heat set point out of range. Lower: %s Upper: %s Heat set point: %s",
-                              self.heat_set_point_limits[0], self.heat_set_point_limits[1], _temp)
+                _LOGGER.error(
+                    "Heat set point out of range. Lower: %s Upper: %s Heat set point: %s",
+                    self.heat_set_point_limits[0],
+                    self.heat_set_point_limits[1],
+                    _temp,
+                )
 
         has_set_temp = False
-        if cool_payload and self.mode in [ThermostatOperationMode.AUTO, ThermostatOperationMode.COOLING]:
+        if cool_payload and self.mode in [
+            ThermostatOperationMode.AUTO,
+            ThermostatOperationMode.COOLING,
+        ]:
             self._api.publish(cool_payload, self.device_id, self.serial_number)
             has_set_temp = True
-        if heat_payload and self.mode in [ThermostatOperationMode.AUTO, ThermostatOperationMode.HEATING,
-                                          ThermostatOperationMode.EMERGENCY_HEAT]:
+        if heat_payload and self.mode in [
+            ThermostatOperationMode.AUTO,
+            ThermostatOperationMode.HEATING,
+            ThermostatOperationMode.EMERGENCY_HEAT,
+        ]:
             self._api.publish(heat_payload, self.device_id, self.serial_number)
             has_set_temp = True
         if target_temp and not has_set_temp:
             payload = {}
             if self.mode == ThermostatOperationMode.COOLING:
                 payload = cool_payload
-            elif self.mode in [ThermostatOperationMode.HEATING, ThermostatOperationMode.EMERGENCY_HEAT]:
+            elif self.mode in [
+                ThermostatOperationMode.HEATING,
+                ThermostatOperationMode.EMERGENCY_HEAT,
+            ]:
                 payload = heat_payload
             else:
-                _LOGGER.error("Can't auto determine set point to set when mode is: %s", self.mode)
+                _LOGGER.error(
+                    "Can't auto determine set point to set when mode is: %s", self.mode
+                )
             self._api.publish(payload, self.device_id, self.serial_number)
