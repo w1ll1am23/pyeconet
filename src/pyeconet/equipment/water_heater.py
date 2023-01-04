@@ -244,6 +244,16 @@ class WaterHeater(Equipment):
         return self._energy_type
 
     @property
+    def todays_energy_usage(self) -> Union[float, None]:
+        _total = 0
+        if self._energy_usage:
+            for value in self._energy_usage.values():
+                _total += value
+            return _total    
+        else:
+            return None
+
+    @property
     def todays_water_usage(self) -> Union[float, None]:
         return self.water_usage
 
