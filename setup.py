@@ -17,7 +17,9 @@ setup(
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     package_dir={"": "src"},
-    packages=find_packages(where="src", exclude=["dist", "*.test", "*.test.*", "test.*", "test"]),
+    packages=find_packages(
+        where="src", exclude=["dist", "*.test", "*.test.*", "test.*", "test"]
+    ),
     install_requires=["aiohttp>=3.6.0", "paho-mqtt>=1.5.0"],
     keywords=["econet", "rheem", "api"],
     python_requires=">=3.9, <4",
