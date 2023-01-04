@@ -13,7 +13,7 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 async def main():
     email = input("Enter your email: ").strip()
-    password = ""  # getpass.getpass(prompt='Enter your password: ')
+    password = getpass.getpass(prompt='Enter your password: ')
     api = await EcoNetApiInterface.login(email, password=password)
     all_equipment = await api.get_equipment_by_type(
         [EquipmentType.WATER_HEATER, EquipmentType.THERMOSTAT]
@@ -27,7 +27,8 @@ async def main():
     #        print(f"Supports modes: {equipment._supports_modes()}")
     #        print(f"Operation modes: {equipment.modes}")
     #        print(f"Operation mode: {equipment.mode}")
-    # await equipment._get_energy_usage()
+    await equipment.get_energy_usage()
+    print(f"{equipment.todays_energy_usage}")
     # equipment.set_set_point(equipment.set_point + 1)
     # equipment.set_mode(OperationMode.ELECTRIC_MODE)
     # await asyncio.sleep(300000)
