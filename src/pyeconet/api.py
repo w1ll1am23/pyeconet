@@ -180,13 +180,13 @@ class EcoNetApiInterface:
         return _equipment
 
     async def _get_location(self) -> List[Dict]:
-        _headers = HEADERS
+        _headers = HEADERS.copy()
         _headers["ClearBlade-UserToken"] = self._user_token
 
         _session = ClientSession()
         try:
             async with _session.post(
-                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=HEADERS
+                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=_headers
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
@@ -204,7 +204,7 @@ class EcoNetApiInterface:
             await _session.close()
 
     async def get_dynamic_action(self, payload: Dict) -> Dict:
-        _headers = HEADERS
+        _headers = HEADERS.copy()
         _headers["ClearBlade-UserToken"] = self._user_token
 
         _session = ClientSession()
@@ -212,7 +212,7 @@ class EcoNetApiInterface:
             async with _session.post(
                 f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
                 json=payload,
-                headers=HEADERS,
+                headers=_headers,
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
