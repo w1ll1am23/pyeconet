@@ -165,7 +165,7 @@ class EcoNetApiInterface:
                 _equip_obj: Equipment = None
                 equipment = self._equipment.get(_equip.get("device_name", ""), None)
                 if equipment:
-                    equipment._update_equipment_info(_equip)
+                    equipment.update_equipment_info(_equip)
 
     async def get_equipment_by_type(self, equipment_type: List) -> Dict:
         """Get a list of equipment by the equipment EquipmentType"""
