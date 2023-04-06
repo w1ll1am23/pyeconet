@@ -162,8 +162,8 @@ class EcoNetApiInterface:
         for _location in _locations:
             # They spelled it wrong...
             for _equip in _location.get("equiptments"):
-                _equip_obj: Equipment = None
-                equipment = self._equipment.get(_equip.get("device_name", ""), None)
+                serial = _equip.get("serial_number")
+                equipment = self._equipment.get(serial)
                 if equipment:
                     equipment.update_equipment_info(_equip)
 
