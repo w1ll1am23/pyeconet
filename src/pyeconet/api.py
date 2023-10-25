@@ -187,7 +187,7 @@ class EcoNetApiInterface:
         _session = ClientSession()
         try:
             async with _session.post(
-                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp", json=payload, headers=HEADERS
+                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp", json=payload, headers=_headers
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
