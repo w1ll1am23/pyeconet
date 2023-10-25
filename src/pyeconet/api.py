@@ -162,10 +162,10 @@ class EcoNetApiInterface:
         for _location in _locations:
             # They spelled it wrong...
             for _equip in _location.get("equiptments"):
-                _equip_obj: Equipment = None
-                equipment = self._equipment.get(_equip.get("device_name", ""), None)
+                serial = _equip.get("serial_number")
+                equipment = self._equipment.get(serial)
                 if equipment:
-                    equipment._update_equipment_info(_equip)
+                    equipment.update_equipment_info(_equip)
 
     async def get_equipment_by_type(self, equipment_type: List) -> Dict:
         """Get a list of equipment by the equipment EquipmentType"""
@@ -180,7 +180,7 @@ class EcoNetApiInterface:
         return _equipment
 
     async def _get_location(self) -> List[Dict]:
-        _headers = HEADERS
+        _headers = HEADERS.copy()
         _headers["ClearBlade-UserToken"] = self._user_token
         payload = {"location_only": False, "type": "com.econet.econetconsumerandroid", "version": "6.0.0-375-01b4870e"}
 
@@ -205,7 +205,7 @@ class EcoNetApiInterface:
             await _session.close()
 
     async def get_dynamic_action(self, payload: Dict) -> Dict:
-        _headers = HEADERS
+        _headers = HEADERS.copy()
         _headers["ClearBlade-UserToken"] = self._user_token
 
         _session = ClientSession()
@@ -213,7 +213,7 @@ class EcoNetApiInterface:
             async with _session.post(
                 f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
                 json=payload,
-                headers=HEADERS,
+                headers=_headers,
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
