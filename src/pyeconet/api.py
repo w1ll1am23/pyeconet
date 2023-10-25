@@ -182,11 +182,12 @@ class EcoNetApiInterface:
     async def _get_location(self) -> List[Dict]:
         _headers = HEADERS.copy()
         _headers["ClearBlade-UserToken"] = self._user_token
+        payload = {"location_only": False, "type": "com.econet.econetconsumerandroid", "version": "6.0.0-375-01b4870e"}
 
         _session = ClientSession()
         try:
             async with _session.post(
-                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getLocation", headers=_headers
+                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp", json=payload, headers=HEADERS
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
