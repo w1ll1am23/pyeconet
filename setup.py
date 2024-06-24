@@ -30,5 +30,5 @@ setup(
     },
     classifiers=[
         "License :: OSI Approved :: MIT License",
-    ]
+    ],
 )
