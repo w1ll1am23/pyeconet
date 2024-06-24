@@ -28,4 +28,7 @@ setup(
         "Bug Reports": "https://github.com/w1ll1am23/pyeconet/issues",
         "Source": "https://github.com/w1ll1am23/pyeconet",
     },
+    classifiers=[
+        "License :: OSI Approved :: MIT License",
+    ]
 )
