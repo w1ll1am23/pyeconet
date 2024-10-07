@@ -33,6 +33,14 @@ _LOGGER = logging.getLogger(__name__)
 
 ApiType = TypeVar("ApiType", bound="EcoNetApiInterface")
 
+def _create_ssl_context() -> ssl.SSLContext:
+    """Create a SSL context for the MQTT connection."""
+    context = ssl.SSLContext(tls_version)
+    context.load_default_certs()
+    return context
+
+_SSL_CONTEXT = _create_ssl_context()
+
 
 class EcoNetApiInterface:
     """
@@ -40,7 +48,7 @@ class EcoNetApiInterface:
     """
 
     def __init__(
-        self, email: str, password: str, account_id: str = None, user_token: str = None, ssl_context: ssl.SSLContext = None
+        self, email: str, password: str, account_id: str = None, user_token: str = None
     ) -> None:
         """
         Create the EcoNet API interface object.
@@ -56,7 +64,6 @@ class EcoNetApiInterface:
         self._locations: List = []
         self._equipment: Dict = {}
         self._mqtt_client = None
-        self._ssl_context = ssl_context
 
     @property
     def user_token(self) -> str:
@@ -69,15 +76,14 @@ class EcoNetApiInterface:
         return self._account_id
 
     @classmethod
-    async def login(cls: Type[ApiType], email: str, password: str, ssl_context: ssl.SSLContext = None) -> ApiType:
+    async def login(cls: Type[ApiType], email: str, password: str) -> ApiType:
         """Create an EcoNetApiInterface object using email and password
         Args:
             email (str): EcoNet account email address.
             password (str): EcoNet account password.
-            ssl_context (SSLContext): Optional SSLContext object.
 
         """
-        this_class = cls(email, password, ssl_context=ssl_context)
+        this_class = cls(email, password)
         await this_class._authenticate({"email": email, "password": password})
         return this_class
 
@@ -100,17 +106,9 @@ class EcoNetApiInterface:
         )
         self._mqtt_client.enable_logger()
 
-        if self._ssl_context is not None:
-            self._mqtt_client.tls_set_context(self._ssl_context)
-        
-        self._mqtt_client.tls_set(
-            ca_certs=None,
-            certfile=None,
-            keyfile=None,
-            cert_reqs=ssl.CERT_REQUIRED,
-            tls_version=ssl.PROTOCOL_TLS,
-            ciphers=None,
-        )
+        self._mqtt_client.tls_set_context(_SSL_CONTEXT)
+        self._mqtt_client.tls_insecure_set(False)
+
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_message = self._on_message
         self._mqtt_client.on_disconnect = self._on_disconnect
