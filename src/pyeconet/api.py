@@ -40,7 +40,7 @@ class EcoNetApiInterface:
     """
 
     def __init__(
-        self, email: str, password: str, account_id: str = None, user_token: str = None
+        self, email: str, password: str, account_id: str = None, user_token: str = None, ssl_context: ssl.SSLContext = None
     ) -> None:
         """
         Create the EcoNet API interface object.
@@ -56,6 +56,7 @@ class EcoNetApiInterface:
         self._locations: List = []
         self._equipment: Dict = {}
         self._mqtt_client = None
+        self._ssl_context = ssl_context
 
     @property
     def user_token(self) -> str:
@@ -68,14 +69,15 @@ class EcoNetApiInterface:
         return self._account_id
 
     @classmethod
-    async def login(cls: Type[ApiType], email: str, password: str) -> ApiType:
+    async def login(cls: Type[ApiType], email: str, password: str, ssl_context: ssl.SSLContext = None) -> ApiType:
         """Create an EcoNetApiInterface object using email and password
         Args:
             email (str): EcoNet account email address.
             password (str): EcoNet account password.
+            ssl_context (SSLContext): Optional SSLContext object.
 
         """
-        this_class = cls(email, password)
+        this_class = cls(email, password, ssl_context=ssl_context)
         await this_class._authenticate({"email": email, "password": password})
         return this_class
 
@@ -97,6 +99,10 @@ class EcoNetApiInterface:
             self._user_token, password=CLEAR_BLADE_SYSTEM_KEY
         )
         self._mqtt_client.enable_logger()
+
+        if self._ssl_context is not None:
+            self._mqtt_client.tls_set_context(self._ssl_context)
+        
         self._mqtt_client.tls_set(
             ca_certs=None,
             certfile=None,
