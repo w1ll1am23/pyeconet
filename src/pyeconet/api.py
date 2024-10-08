@@ -35,7 +35,7 @@ ApiType = TypeVar("ApiType", bound="EcoNetApiInterface")
 
 def _create_ssl_context() -> ssl.SSLContext:
     """Create a SSL context for the MQTT connection."""
-    context = ssl.SSLContext(tls_version)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_default_certs()
     return context
 
