@@ -33,6 +33,14 @@ _LOGGER = logging.getLogger(__name__)
 
 ApiType = TypeVar("ApiType", bound="EcoNetApiInterface")
 
+def _create_ssl_context() -> ssl.SSLContext:
+    """Create a SSL context for the MQTT connection."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+    context.load_default_certs()
+    return context
+
+_SSL_CONTEXT = _create_ssl_context()
+
 
 class EcoNetApiInterface:
     """
@@ -97,14 +105,10 @@ class EcoNetApiInterface:
             self._user_token, password=CLEAR_BLADE_SYSTEM_KEY
         )
         self._mqtt_client.enable_logger()
-        self._mqtt_client.tls_set(
-            ca_certs=None,
-            certfile=None,
-            keyfile=None,
-            cert_reqs=ssl.CERT_REQUIRED,
-            tls_version=ssl.PROTOCOL_TLS,
-            ciphers=None,
-        )
+
+        self._mqtt_client.tls_set_context(_SSL_CONTEXT)
+        self._mqtt_client.tls_insecure_set(False)
+
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_message = self._on_message
         self._mqtt_client.on_disconnect = self._on_disconnect
