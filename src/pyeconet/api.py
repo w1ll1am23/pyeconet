@@ -96,7 +96,8 @@ class EcoNetApiInterface:
             return False
 
         self._mqtt_client = mqtt.Client(
-            self._get_client_id(),
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION1,
+            client_id=self._get_client_id(),
             clean_session=True,
             userdata=None,
             protocol=mqtt.MQTTv311,
