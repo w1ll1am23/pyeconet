@@ -22,7 +22,7 @@ setup(
     ),
     install_requires=["aiohttp>=3.6.0", "paho-mqtt>=1.5.0"],
     keywords=["econet", "rheem", "api"],
-    python_requires=">=3.9, <4",
+    python_requires=">=3.8, <4",
     url="https://github.com/w1ll1am23/pyeconet",
     project_urls={
         "Bug Reports": "https://github.com/w1ll1am23/pyeconet/issues",
