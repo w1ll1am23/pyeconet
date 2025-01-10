@@ -1,7 +1,15 @@
 # pyeconet
 Python3 interface to the unofficial EcoNet API.
 
-**NOTE** This isn't using an official EcoNet API therefore this library could stop working at any time, without warning.
+> [!NOTE]
+> I no longer have a device connect to the Rheem cloud due to migrating to a fully local control option 
+> https://github.com/esphome-econet/esphome-econet
+> If anyone is interested in taking over ownership for this project please open an issue to discuss.
+
+> [!NOTE]
+> This isn't using an official EcoNet API therefore this library could stop working at any time, without warning.
+
+
 
 ```python
 import asyncio
