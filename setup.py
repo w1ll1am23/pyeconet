@@ -20,7 +20,7 @@ setup(
     packages=find_packages(
         where="src", exclude=["dist", "*.test", "*.test.*", "test.*", "test"]
     ),
-    install_requires=["aiohttp>=3.6.0", "paho-mqtt>=1.5.0"],
+    install_requires=["aiohttp>=3.11.11, <4", "paho-mqtt>=2.1.0, <3"],
     keywords=["econet", "rheem", "api"],
     python_requires=">=3.8, <4",
     url="https://github.com/w1ll1am23/pyeconet",
