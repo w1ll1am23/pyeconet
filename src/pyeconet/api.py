@@ -144,6 +144,17 @@ class EcoNetApiInterface:
         for _location in _locations:
             # They spelled it wrong...
             for _equip in _location.get("equiptments"):
+                # Fix enumeration of Emergency Heat in Thermostat, maybe others?
+                if "@MODE" in _equip:
+                    # Need test that value exists?
+                    _enumtext = _equip["@MODE"]['constraints']['enumText']
+                    _value = _equip["@MODE"]['value']
+                    _status = _equip["@MODE"]['status']
+                    if (_value != _enumtext.index(_status)):
+                        _LOGGER.debug("Enum value mismatch: "
+                                      f"{_enumtext[_value]} != "
+                                      f"{_equip["@MODE"]['status']}")
+                        _equip["@MODE"]['value'] = _enumtext.index(_status)
                 _equip_obj: Equipment = None
                 if (
                     Equipment._coerce_type_from_string(_equip.get("device_type"))
