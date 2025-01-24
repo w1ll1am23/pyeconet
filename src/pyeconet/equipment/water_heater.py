@@ -1,6 +1,6 @@
 """EcoNet water heater"""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import enum
 from typing import List, Union, Optional, Dict
@@ -174,8 +174,8 @@ class WaterHeater(Equipment):
                 if _op_mode is not WaterHeaterOperationMode.UNKNOWN:
                     if _op_mode is WaterHeaterOperationMode.ELECTRIC_GAS:
                         if (
-                            self.generic_type == "gasWaterHeater"
-                            or self.generic_type == "tanklessWaterHeater"
+                                self.generic_type == "gasWaterHeater"
+                                or self.generic_type == "tanklessWaterHeater"
                         ):
                             _supported_modes.append(WaterHeaterOperationMode.GAS)
                         else:
@@ -187,8 +187,8 @@ class WaterHeater(Equipment):
         if self._supports_on_off() and not _supported_modes:
             _supported_modes.append(WaterHeaterOperationMode.OFF)
             if (
-                self.generic_type == "gasWaterHeater"
-                or self.generic_type == "tanklessWaterHeater"
+                    self.generic_type == "gasWaterHeater"
+                    or self.generic_type == "tanklessWaterHeater"
             ):
                 _supported_modes.append(WaterHeaterOperationMode.GAS)
             else:
@@ -207,8 +207,8 @@ class WaterHeater(Equipment):
             return self.modes[self._equipment_info.get("@MODE")["value"]]
         else:
             if (
-                self.generic_type == "gasWaterHeater"
-                or self.generic_type == "tanklessWaterHeater"
+                    self.generic_type == "gasWaterHeater"
+                    or self.generic_type == "tanklessWaterHeater"
             ):
                 return WaterHeaterOperationMode.GAS
             else:
@@ -249,7 +249,7 @@ class WaterHeater(Equipment):
         if self._energy_usage:
             for value in self._energy_usage.values():
                 _total += value
-            return _total    
+            return _total
         else:
             return None
 
@@ -258,37 +258,25 @@ class WaterHeater(Equipment):
         return self.water_usage
 
     async def get_energy_usage(
-        self,
-        usage_format: UsageFormat = UsageFormat.DAILY,
-        year: Optional[int] = None,
-        month: Optional[int] = None,
-        period: Optional[int] = None,
+            self,
+            start: Optional[datetime] = None,
+            end: Optional[datetime] = None,
     ):
         """Call dynamic action for energy usage."""
-        date = datetime.now()
-
-        if year is None:
-            year = date.year
-
-        if month is None:
-            month = date.month
-
-        if period is None:
-            if usage_format in {"usage", "yearly"}:
-                period = 1
-            else:
-                period = date.day
+        current_date = datetime.now()
+        end_datetime_formatted = current_date.strftime("%Y-%m-%dT23:59:59.999")
+        start_datetime_formatted = current_date.strftime("%Y-%m-%dT00:00:00.999")
+        if end:
+            end_datetime_formatted = current_date.strftime("%Y-%m-%dT%H:%M:%S.000")
+        if start:
+            start_datetime_formatted = current_date.strftime("%Y-%m-%dT%H:%M:%S.000")
 
         payload = {
             "ACTION": "waterheaterUsageReportView",
             "device_name": f"{self.device_id}",
             "serial_number": f"{self.serial_number}",
-            "graph_data": {
-                "format": f"{usage_format}",
-                "month": month,
-                "period": period,
-                "year": year,
-            },
+            "start_date": start_datetime_formatted,
+            "end_date": end_datetime_formatted,
             "usage_type": "energyUsage",
         }
         try:
@@ -318,19 +306,25 @@ class WaterHeater(Equipment):
 
         _LOGGER.debug(self._energy_usage)
 
-    async def get_water_usage(self):
+    async def get_water_usage(self,
+            start: Optional[datetime] = None,
+            end: Optional[datetime] = None
+        ):
         """Call dynamic action for water usage."""
-        date = datetime.now()
+        current_date = datetime.now()
+        end_datetime_formatted = current_date.strftime("%Y-%m-%dT23:59:59.999")
+        start_datetime_formatted = current_date.strftime("%Y-%m-%dT00:00:00.999")
+        if end:
+            end_datetime_formatted = current_date.strftime("%Y-%m-%dT%H:%M:%S.000")
+        if start:
+            start_datetime_formatted = current_date.strftime("%Y-%m-%dT%H:%M:%S.000")
+
         payload = {
             "ACTION": "waterheaterUsageReportView",
             "device_name": f"{self.device_id}",
             "serial_number": f"{self.serial_number}",
-            "graph_data": {
-                "format": "daily",
-                "month": f"{date.month}",
-                "period": f"{date.day}",
-                "year": f"{date.year}",
-            },
+            "start_date": start_datetime_formatted,
+            "end_date": end_datetime_formatted,
             "usage_type": "waterUsage",
         }
         try:

@@ -29,6 +29,8 @@ async def main():
     #        print(f"Operation mode: {equipment.mode}")
     await equipment.get_energy_usage()
     print(f"{equipment.todays_energy_usage}")
+    await equipment.get_water_usage()
+    print(f"{equipment.todays_water_usage}")
     # equipment.set_set_point(equipment.set_point + 1)
     # equipment.set_mode(OperationMode.ELECTRIC_MODE)
     # await asyncio.sleep(300000)
