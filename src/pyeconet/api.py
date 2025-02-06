@@ -144,6 +144,9 @@ class EcoNetApiInterface:
         for _location in _locations:
             # They spelled it wrong...
             for _equip in _location.get("equiptments"):
+                # Early exit if server returned error code
+                if "error" in _equip:
+                    continue
                 _equip_obj: Equipment = None
                 if (
                     Equipment._coerce_type_from_string(_equip.get("device_type"))

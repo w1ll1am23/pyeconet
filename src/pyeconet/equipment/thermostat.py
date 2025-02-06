@@ -190,6 +190,15 @@ class Thermostat(Equipment):
     @property
     def mode(self) -> Union[ThermostatOperationMode, None]:
         """Return the current mode"""
+        if "@MODE" in self._equipment_info:
+            enumtext = self._equipment_info["@MODE"]['constraints']['enumText']
+            value = self._equipment_info["@MODE"]['value']
+            status = self._equipment_info["@MODE"]['status']
+            if (value != enumtext.index(status)):
+                _LOGGER.debug("Enum value mismatch: "
+                              f"{enumtext[value]} != "
+                              f"{self._equipment_info["@MODE"]['status']}")
+                self._equipment_info["@MODE"]['value'] = enumtext.index(status)
         return self.modes[self._equipment_info.get("@MODE")["value"]]
 
     @property
