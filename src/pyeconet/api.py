@@ -87,6 +87,28 @@ class EcoNetApiInterface:
         await this_class._authenticate({"email": email, "password": password})
         return this_class
 
+    def check_mode_enum(self, equip, enumtext=False):
+        # Fix enumeration of Emergency Heat in Thermostat, maybe others?
+        if "@MODE" in equip and isinstance(equip["@MODE"], Dict):
+            if 'constraints' in equip["@MODE"]:
+                enumtext = equip["@MODE"]['constraints']['enumText']
+            if enumtext:
+                value = equip["@MODE"]['value']
+                status = equip["@MODE"]['status']
+                if (value != enumtext.index(status)):
+                    _LOGGER.debug("Enum value mismatch: "
+                                  f"{enumtext[value]} != "
+                                  f"{equip["@MODE"]['status']}")
+                    equip["@MODE"]['value'] = enumtext.index(status)
+        return equip, enumtext
+
+    def check_update_enum(self, equip, update):
+        # Update messages only have the status and value, so get the enumtext
+        equip, enumtext = self.check_mode_enum(equip)
+        # Fix the update
+        update, __ = self.check_mode_enum(update, enumtext)
+        return equip, update
+
     def subscribe(self):
         """Subscribe to the MQTT updates"""
         if not self._equipment:
@@ -144,17 +166,10 @@ class EcoNetApiInterface:
         for _location in _locations:
             # They spelled it wrong...
             for _equip in _location.get("equiptments"):
-                # Fix enumeration of Emergency Heat in Thermostat, maybe others?
-                if "@MODE" in _equip:
-                    # Need test that value exists?
-                    _enumtext = _equip["@MODE"]['constraints']['enumText']
-                    _value = _equip["@MODE"]['value']
-                    _status = _equip["@MODE"]['status']
-                    if (_value != _enumtext.index(_status)):
-                        _LOGGER.debug("Enum value mismatch: "
-                                      f"{_enumtext[_value]} != "
-                                      f"{_equip["@MODE"]['status']}")
-                        _equip["@MODE"]['value'] = _enumtext.index(_status)
+                # Early exit if server returned error code
+                if "error" in _equip:
+                    continue
+                _equip, __ = self.check_mode_enum(_equip)
                 _equip_obj: Equipment = None
                 if (
                     Equipment._coerce_type_from_string(_equip.get("device_type"))
@@ -181,6 +196,7 @@ class EcoNetApiInterface:
                 serial = _equip.get("serial_number")
                 equipment = self._equipment.get(serial)
                 if equipment:
+                    _equip, __ = self.check_mode_enum(_equip)
                     equipment.update_equipment_info(_equip)
 
     async def get_equipment_by_type(self, equipment_type: List) -> Dict:
@@ -287,6 +303,7 @@ class EcoNetApiInterface:
             key = _serial
             _equipment = self._equipment.get(key)
             if _equipment is not None:
+                _equipment._equipment_info, unpacked_json = self.check_update_enum(_equipment._equipment_info, unpacked_json)
                 _equipment.update_equipment_info(unpacked_json)
             # Nasty hack to push signal updates to the device it belongs to
             elif "@SIGNAL" in str(unpacked_json):
