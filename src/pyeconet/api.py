@@ -225,7 +225,10 @@ class EcoNetApiInterface:
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
-                    _LOGGER.debug(_json)
+                    if _LOGGER.getEffectiveLevel() == logging.DEBUG:
+                        _LOGGER.debug("Logging json to locations_debug.json")
+                        with open('locations_debug.json', 'w') as debug_file:
+                            json.dump(_json, debug_file, indent=2)
                     if _json.get("success"):
                         self._locations = _json["results"]["locations"]
                         return self._locations
@@ -251,7 +254,7 @@ class EcoNetApiInterface:
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
-                    _LOGGER.debug(_json)
+                    _LOGGER.debug(json.dumps(_json, indent=2))
                     if _json.get("success"):
                         return _json
 
@@ -272,7 +275,7 @@ class EcoNetApiInterface:
           ) as resp:
               if resp.status == 200:
                   _json = await resp.json()
-                  _LOGGER.debug(_json)
+                  _LOGGER.debug(json.dumps(_json, indent=2))
                   if _json.get("options")["success"]:
                       self._user_token = _json.get("user_token")
                       self._account_id = _json.get("options").get("account_id")
