@@ -132,7 +132,7 @@ class EcoNetApiInterface:
         )
 
     def unsubscribe(self) -> None:
-        self._mqtt_client.loop_stop(force=True)
+        self._mqtt_client.loop_stop()
 
     def _get_client_id(self) -> str:
         time_string = str(time.time()).replace(".", "")[:13]
