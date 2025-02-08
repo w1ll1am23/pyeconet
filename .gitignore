@@ -90,5 +90,3 @@ ENV/
 
 # IDE
 .idea/
-
-*.json
