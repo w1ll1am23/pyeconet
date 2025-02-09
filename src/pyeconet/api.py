@@ -168,7 +168,7 @@ class EcoNetApiInterface:
             for _equip in _location.get("equiptments"):
                 # Early exit if server returned error code
                 if "error" in _equip:
-                    _LOGGER.error("EcoNet equipment error message"
+                    _LOGGER.debug("EcoNet equipment error message"
                                   f": {_equip.get('error')}")
                     continue
                 _equip, __ = self.check_mode_enum(_equip)
