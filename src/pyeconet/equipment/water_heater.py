@@ -100,7 +100,7 @@ class WaterHeater(Equipment):
 
     @property
     def has_shutoff_valve(self) -> bool:
-        return self._equipment_info.get("@VALVE") is not None
+        return self._equipment_info.get("@VALVESTATUS", {}).get('title', "").startswith("Shut-OFF Valve - ")
 
     @property
     def running(self) -> bool:
@@ -137,7 +137,11 @@ class WaterHeater(Equipment):
     def shutoff_valve_open(self) -> Union[bool, None]:
         """Return if the shutoff valve is open or not"""
         if self.has_shutoff_valve:
-            return self._equipment_info.get("@VALVE")["value"] == 0
+            status = self._equipment_info.get("@VALVESTATUS")["title"]
+            if status == "Shut-OFF Valve - Open":
+                return True
+            elif status == "Shut-OFF Valve - Closed":
+                return False
         return None
 
     @property
