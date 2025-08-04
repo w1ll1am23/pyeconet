@@ -145,7 +145,7 @@ class Equipment:
 
     @property
     def set_point(self) -> int:
-        """Return the water heaters temperature set point"""
+        """Return the units temperature set point"""
         return self._equipment_info.get("@SETPOINT")["value"]
 
     @property
@@ -162,12 +162,13 @@ class Equipment:
         That means this field will be None until an update comes through over MQTT.
         """
         signal = self._equipment_info.get("@SIGNAL")
-        try:
-            if signal:
-                signal = int(signal)
-        except TypeError:
-            if signal:
-                signal = self._equipment_info.get("@SIGNAL")["value"]
+        if signal is not None:
+            try:
+                if signal:
+                    signal = int(signal)
+            except TypeError:
+                if signal:
+                    signal = self._equipment_info.get("@SIGNAL")["value"]
         return signal
 
     def force_update_from_api(self):

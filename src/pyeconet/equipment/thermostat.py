@@ -47,8 +47,8 @@ class ThermostatOperationMode(Enum):
             return ThermostatOperationMode.UNKNOWN
 
 
-class ThermostatFanMode(Enum):
-    """Define the operation mode"""
+class ThermostatFanSpeed(Enum):
+    """Define the fan speeds"""
 
     AUTO = 1
     LOW = 2
@@ -56,52 +56,81 @@ class ThermostatFanMode(Enum):
     MEDIUM = 4
     MEDHI = 5
     HIGH = 6
+    MAX = 7
     UNKNOWN = 99
 
     @staticmethod
     def by_string(str_value: str):
         """Convert a string to a supported OperationMode"""
         _cleaned_string = str_value.rstrip().replace(" ", "_").replace(".", "").upper()
+        if _cleaned_string == ThermostatFanSpeed.AUTO.name.upper():
+            return ThermostatFanSpeed.AUTO
+        elif _cleaned_string == ThermostatFanSpeed.LOW.name.upper():
+            return ThermostatFanSpeed.LOW
+        elif _cleaned_string == ThermostatFanSpeed.MEDLO.name.upper():
+            return ThermostatFanSpeed.MEDLO
+        elif _cleaned_string == ThermostatFanSpeed.MEDIUM.name.upper():
+            return ThermostatFanSpeed.MEDIUM
+        elif _cleaned_string == ThermostatFanSpeed.MEDHI.name.upper():
+            return ThermostatFanSpeed.MEDHI
+        elif _cleaned_string == ThermostatFanSpeed.HIGH.name.upper():
+            return ThermostatFanSpeed.HIGH
+        elif _cleaned_string == ThermostatFanSpeed.MAX.name.upper():
+            return ThermostatFanSpeed.MAX
+        else:
+            _LOGGER.error("Unknown fan speed: [%s]", str_value)
+            return ThermostatFanSpeed.UNKNOWN
+
+class ThermostatFanMode(Enum):
+    """Define the fan modes"""
+
+    AUTO = 1
+    ON_CONTINUOUS = 2
+    UNKNOWN = 99
+
+    @staticmethod
+    def by_string(str_value: str):
+        """Convert a string to a supported OperationMode"""
+        _cleaned_string = str_value.rstrip().replace(" ", "_").replace(".", "").replace("/", "_").upper()
         if _cleaned_string == ThermostatFanMode.AUTO.name.upper():
             return ThermostatFanMode.AUTO
-        elif _cleaned_string == ThermostatFanMode.LOW.name.upper():
-            return ThermostatFanMode.LOW
-        elif _cleaned_string == ThermostatFanMode.MEDLO.name.upper():
-            return ThermostatFanMode.MEDLO
-        elif _cleaned_string == ThermostatFanMode.MEDIUM.name.upper():
-            return ThermostatFanMode.MEDIUM
-        elif _cleaned_string == ThermostatFanMode.MEDHI.name.upper():
-            return ThermostatFanMode.MEDHI
-        elif _cleaned_string == ThermostatFanMode.HIGH.name.upper():
-            return ThermostatFanMode.HIGH
+        elif _cleaned_string == ThermostatFanMode.ON_CONTINUOUS.name.upper():
+            return ThermostatFanMode.ON_CONTINUOUS
         else:
             _LOGGER.error("Unknown fan mode: [%s]", str_value)
             return ThermostatFanMode.UNKNOWN
 
-
 class Thermostat(Equipment):
     @property
-    def running(self) -> bool:
+    def running(self) -> bool | None:
         """Return if the thermostat is running or not"""
-        return self._equipment_info.get("@RUNNINGSTATUS") != ""
+        if self.running_state is not None:
+            return self._equipment_info.get("@RUNNINGSTATUS") != ""
+        else:
+            return None
 
     @property
-    def running_state(self) -> str:
+    def running_state(self) -> str | None:
         """Return the raw running status value"""
         return self._equipment_info.get("@RUNNINGSTATUS")
 
+
     @property
-    def beep_enabled(self) -> bool:
+    def beep_enabled(self) -> bool | None:
         """Return if thermostat beep is enabled or not"""
         beep = self._equipment_info.get("@BEEP")
         if beep is not None:
             return beep["value"] == 1
         else:
-            return False
+            return None
 
     @property
     def supports_humidifier(self) -> bool:
-        return self._equipment_info.get("@DEHUMENABLE").get("constraints") is not None
+        de_hum_enabled = self._equipment_info.get("@DEHUMENABLE")
+        if de_hum_enabled:
+            return de_hum_enabled.get("constraints") is not None
+        else:
+            return False
 
     @property
     def cool_set_point(self) -> int:
@@ -148,6 +177,10 @@ class Thermostat(Equipment):
     def dehumidifier_enabled(self) -> bool:
         return self._equipment_info.get("@DEHUMENABLE")["value"] == 1
 
+    @property
+    def supports_fan_mode(self) -> bool:
+        return self._equipment_info.get("@FANMODE") is not None
+
     def set_dehumidifier_set_point(self, humidity):
         """Set the provided humidity"""
         lower, upper = self.dehumidifier_set_point_limits
@@ -168,13 +201,21 @@ class Thermostat(Equipment):
         return self._equipment_info.get("@ZONE_ID_NAME")
 
     @property
-    def humidity(self) -> int:
+    def humidity(self) -> Union[int, None]:
         """Returns the current humidity"""
-        return self._equipment_info.get("@HUMIDITY")["value"]
+        humidity = self._equipment_info.get("@HUMIDITY")
+        if humidity:
+            return humidity["value"]
+        else:
+            return None
 
     @property
-    def screen_locked(self) -> bool:
-        return self._equipment_info.get("@SCREENLOCK")["value"] == 1
+    def screen_locked(self) -> Union[bool, None]:
+        screen_lock = self._equipment_info.get("@SCREENLOCK")
+        if screen_lock:
+            return screen_lock["value"] == 1
+        else:
+            return None
 
     @property
     def modes(self) -> List[ThermostatOperationMode]:
@@ -199,7 +240,14 @@ class Thermostat(Equipment):
 
         Thermostat set points are too extreme -100 - 200 setting reasonable limits.
         """
-        return 40, 95
+        cool_set_point = self._equipment_info.get("@COOLSETPOINT")["constraints"]
+        heat_set_point = self._equipment_info.get("@HEATSETPOINT")["constraints"]
+        if self.mode == ThermostatOperationMode.COOLING:
+            return cool_set_point["lowerLimit"], cool_set_point["upperLimit"]
+        elif self.mode == ThermostatOperationMode.AUTO or self.mode == ThermostatOperationMode.FAN_ONLY:
+            return cool_set_point["lowerLimit"], heat_set_point["upperLimit"]
+        else:
+            return heat_set_point["lowerLimit"], heat_set_point["upperLimit"]
 
     def set_mode(self, mode: ThermostatOperationMode):
         """Set the provided mode"""
@@ -213,10 +261,37 @@ class Thermostat(Equipment):
         self._api.publish(payload, self.device_id, self.serial_number)
 
     @property
-    def fan_modes(self) -> List[ThermostatFanMode]:
-        """Return a list of supported operation modes"""
+    def fan_speeds(self) -> List[ThermostatFanSpeed]:
+        """Return a list of supported fan speeds"""
         _supported_modes = []
         _modes = self._equipment_info.get("@FANSPEED")["constraints"]["enumText"]
+        for _mode in _modes:
+            _op_mode = ThermostatFanSpeed.by_string(_mode)
+            if _op_mode is not ThermostatFanSpeed.UNKNOWN:
+                _supported_modes.append(_op_mode)
+        return _supported_modes
+
+    @property
+    def fan_speed(self) -> Union[ThermostatFanSpeed, None]:
+        """Return the current fan speed"""
+        return self.fan_speeds[self._equipment_info.get("@FANSPEED")["value"]]
+
+    def set_fan_speed(self, mode: ThermostatFanSpeed):
+        """Set the provided mode"""
+        payload = {}
+        text_modes = self._equipment_info["@FANSPEED"]["constraints"]["enumText"]
+        count = 0
+        for text_mode in text_modes:
+            if mode == ThermostatFanSpeed.by_string(text_mode):
+                payload["@FANSPEED"] = count
+            count = count + 1
+        self._api.publish(payload, self.device_id, self.serial_number)
+
+    @property
+    def fan_modes(self) -> List[ThermostatFanMode]:
+        """Return a list of supported fan modes"""
+        _supported_modes = []
+        _modes = self._equipment_info.get("@FANMODE")["constraints"]["enumText"]
         for _mode in _modes:
             _op_mode = ThermostatFanMode.by_string(_mode)
             if _op_mode is not ThermostatFanMode.UNKNOWN:
@@ -225,17 +300,17 @@ class Thermostat(Equipment):
 
     @property
     def fan_mode(self) -> Union[ThermostatFanMode, None]:
-        """Return the current mode"""
-        return self.fan_modes[self._equipment_info.get("@FANSPEED")["value"]]
+        """Return the fan current mode"""
+        return self.fan_modes[self._equipment_info.get("@FANMODE")["value"]]
 
     def set_fan_mode(self, mode: ThermostatFanMode):
         """Set the provided mode"""
         payload = {}
-        text_modes = self._equipment_info["@FANSPEED"]["constraints"]["enumText"]
+        text_modes = self._equipment_info["@FANMODE"]["constraints"]["enumText"]
         count = 0
         for text_mode in text_modes:
             if mode == ThermostatFanMode.by_string(text_mode):
-                payload["@FANSPEED"] = count
+                payload["@FANMODE"] = count
             count = count + 1
         self._api.publish(payload, self.device_id, self.serial_number)
 
