@@ -33,11 +33,13 @@ _LOGGER = logging.getLogger(__name__)
 
 ApiType = TypeVar("ApiType", bound="EcoNetApiInterface")
 
+
 def _create_ssl_context() -> ssl.SSLContext:
     """Create a SSL context for the MQTT connection."""
     context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_default_certs()
     return context
+
 
 _SSL_CONTEXT = _create_ssl_context()
 
@@ -48,7 +50,7 @@ class EcoNetApiInterface:
     """
 
     def __init__(
-        self, email: str, password: str, account_id: str = None, user_token: str = None
+            self, email: str, password: str, account_id: str = None, user_token: str = None
     ) -> None:
         """
         Create the EcoNet API interface object.
@@ -87,19 +89,28 @@ class EcoNetApiInterface:
         await this_class._authenticate({"email": email, "password": password})
         return this_class
 
-    def check_mode_enum(self, equip, enumtext=False):
+    def check_mode_enum(self, equip, enumtext=None):
         # Fix enumeration of Emergency Heat in Thermostat, maybe others?
         if "@MODE" in equip and isinstance(equip["@MODE"], Dict):
             if 'constraints' in equip["@MODE"]:
                 enumtext = equip["@MODE"]['constraints']['enumText']
-            if enumtext:
+            status = equip["@MODE"].get('status')
+            if enumtext and status:
                 value = equip["@MODE"]['value']
-                status = equip["@MODE"]['status']
-                if (value != enumtext.index(status)):
+                try:
+                    enumtext_index_by_status = enumtext.index(status)
+                    if value != enumtext_index_by_status:
+                        _LOGGER.debug("Enum value mismatch: "
+                                      f"{enumtext[value]} != "
+                                      f"{equip['@MODE']['status']}")
+                        equip["@MODE"]['value'] = enumtext_index_by_status
+                except ValueError:
+                    # friedrich seems to return cool vs cooling which causes this issue but the value (index)
+                    # is still right so maybe we can ignore it?
                     _LOGGER.debug("Enum value mismatch: "
                                   f"{enumtext[value]} != "
-                                  f"{equip["@MODE"]['status']}")
-                    equip["@MODE"]['value'] = enumtext.index(status)
+                                  f"{equip['@MODE']['status']}")
+
         return equip, enumtext
 
     def check_update_enum(self, equip, update):
@@ -174,14 +185,14 @@ class EcoNetApiInterface:
                 _equip, __ = self.check_mode_enum(_equip)
                 _equip_obj: Equipment = None
                 if (
-                    Equipment._coerce_type_from_string(_equip.get("device_type"))
-                    == EquipmentType.WATER_HEATER
+                        Equipment._coerce_type_from_string(_equip.get("device_type"))
+                        == EquipmentType.WATER_HEATER
                 ):
                     _equip_obj = WaterHeater(_equip, self)
                     self._equipment[_equip_obj.serial_number] = _equip_obj
                 elif (
-                    Equipment._coerce_type_from_string(_equip.get("device_type"))
-                    == EquipmentType.THERMOSTAT
+                        Equipment._coerce_type_from_string(_equip.get("device_type"))
+                        == EquipmentType.THERMOSTAT
                 ):
                     _equip_obj = Thermostat(_equip, self)
                     self._equipment[_equip_obj.serial_number] = _equip_obj
@@ -216,12 +227,13 @@ class EcoNetApiInterface:
     async def _get_location(self) -> List[Dict]:
         _headers = HEADERS.copy()
         _headers["ClearBlade-UserToken"] = self._user_token
-        payload = {"location_only": False, "type": "com.econet.econetconsumerandroid", "version": "6.0.0-375-01b4870e"}
+        payload = {"resource": "friedrich"}
+        # payload = {"location_only": False, "type": "com.econet.econetconsumerandroid", "version": "6.0.0-375-01b4870e"}
 
         _session = ClientSession()
         try:
             async with _session.post(
-                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp", json=payload, headers=_headers
+                    f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp", json=payload, headers=_headers
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
@@ -245,9 +257,9 @@ class EcoNetApiInterface:
         _session = ClientSession()
         try:
             async with _session.post(
-                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
-                json=payload,
-                headers=_headers,
+                    f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
+                    json=payload,
+                    headers=_headers,
             ) as resp:
                 if resp.status == 200:
                     _json = await resp.json()
@@ -267,21 +279,21 @@ class EcoNetApiInterface:
 
         _session = ClientSession()
         try:
-          async with _session.post(
-              f"{REST_URL}/user/auth", json=payload, headers=HEADERS
-          ) as resp:
-              if resp.status == 200:
-                  _json = await resp.json()
-                  _LOGGER.debug(json.dumps(_json, indent=2))
-                  if _json.get("options")["success"]:
-                      self._user_token = _json.get("user_token")
-                      self._account_id = _json.get("options").get("account_id")
-                  else:
-                      raise InvalidCredentialsError(_json.get("options")["message"])
-              else:
-                  raise GenericHTTPError(resp.status)
+            async with _session.post(
+                    f"{REST_URL}/user/auth", json=payload, headers=HEADERS
+            ) as resp:
+                if resp.status == 200:
+                    _json = await resp.json()
+                    _LOGGER.debug(json.dumps(_json, indent=2))
+                    if _json.get("options")["success"]:
+                        self._user_token = _json.get("user_token")
+                        self._account_id = _json.get("options").get("account_id")
+                    else:
+                        raise InvalidCredentialsError(_json.get("options")["message"])
+                else:
+                    raise GenericHTTPError(resp.status)
         finally:
-          await _session.close()
+            await _session.close()
 
     def _on_connect(self, client, userdata, flags, rc):
         _LOGGER.debug(f"Connected with result code: {str(rc)}")
@@ -305,7 +317,8 @@ class EcoNetApiInterface:
             key = _serial
             _equipment = self._equipment.get(key)
             if _equipment is not None:
-                _equipment._equipment_info, unpacked_json = self.check_update_enum(_equipment._equipment_info, unpacked_json)
+                _equipment._equipment_info, unpacked_json = self.check_update_enum(_equipment._equipment_info,
+                                                                                   unpacked_json)
                 _equipment.update_equipment_info(unpacked_json)
             # Nasty hack to push signal updates to the device it belongs to
             elif "@SIGNAL" in str(unpacked_json):
