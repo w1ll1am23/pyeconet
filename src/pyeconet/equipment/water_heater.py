@@ -123,9 +123,9 @@ class WaterHeater(Equipment):
         if "ic_tank_hundread_percent" in icon:
             value = 100
         elif "ic_tank_fourty_percent" in icon:
-            value = 40
+            value = 66 # fourty_percent icon is used with text of "2/3rd full"
         elif "ic_tank_ten_percent" in icon:
-            value = 10
+            value = 33 # ten_percent icon is used with text of "1/3rd full"
         elif "ic_tank_empty" in icon or "ic_tank_zero_percent" in icon:
             # Tank is empty when shutoff valve is closed
             value = 0
