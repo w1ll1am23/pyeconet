@@ -6,7 +6,7 @@ here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the README file
 LONG_DESCRIPTION = (here / "README.md").read_text(encoding="utf-8")
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 
 # Setting up
 setup(
