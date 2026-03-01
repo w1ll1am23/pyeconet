@@ -251,8 +251,12 @@ class WaterHeater(Equipment):
     def todays_energy_usage(self) -> Union[float, None]:
         _total = 0
         if self._energy_usage:
-            for value in self._energy_usage.values():
-                _total += value
+            _found_today = False
+            for hour, value in self._energy_usage.items():
+                # Start summing once we find hour 0 (today's start)
+                if hour == 0 or _found_today:
+                    _found_today = True
+                    _total += value
             return _total
         else:
             return None
