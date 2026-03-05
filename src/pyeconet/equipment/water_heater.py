@@ -251,8 +251,12 @@ class WaterHeater(Equipment):
     def todays_energy_usage(self) -> Union[float, None]:
         _total = 0
         if self._energy_usage:
-            for value in self._energy_usage.values():
-                _total += value
+            _found_today = False
+            for hour, value in self._energy_usage.items():
+                # Start summing once we find hour 0 (today's start)
+                if hour == 0 or _found_today:
+                    _found_today = True
+                    _total += value
             return _total
         else:
             return None
@@ -267,16 +271,13 @@ class WaterHeater(Equipment):
             end: Optional[datetime] = None,
     ):
         """Call dynamic action for energy usage."""
-        current_date = datetime.now().astimezone()
-        start_of_day = current_date.replace(hour=0, minute=0, second=0, microsecond=999000)
-        end_of_day = current_date.replace(hour=23, minute=59, second=59, microsecond=999000)
-
-        end_datetime_formatted = end_of_day.isoformat(timespec='milliseconds')
-        start_datetime_formatted = start_of_day.isoformat(timespec='milliseconds')
+        current_date = datetime.now()
+        end_datetime_formatted = current_date.strftime("%Y-%m-%dT23:59:59.999")
+        start_datetime_formatted = current_date.strftime("%Y-%m-%dT00:00:00.999")
         if end:
-            end_datetime_formatted = end.isoformat(timespec='milliseconds')
+            end_datetime_formatted = current_date.strftime("%Y-%m-%dT%H:%M:%S.000")
         if start:
-            start_datetime_formatted = start.isoformat(timespec='milliseconds')
+            start_datetime_formatted = current_date.strftime("%Y-%m-%dT%H:%M:%S.000")
 
         payload = {
             "ACTION": "waterheaterUsageReportView",
