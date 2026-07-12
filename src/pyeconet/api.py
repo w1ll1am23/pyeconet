@@ -35,10 +35,17 @@ ApiType = TypeVar("ApiType", bound="EcoNetApiInterface")
 
 
 def _create_ssl_context() -> ssl.SSLContext:
-    """Create a SSL context for the MQTT connection."""
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
-    context.load_default_certs()
-    return context
+    """Create a TLS context for the MQTT connection.
+
+    Uses ssl.create_default_context() which enables certificate and hostname
+    verification and respects the SSL_CERT_FILE / REQUESTS_CA_BUNDLE
+    environment variables. This allows custom CA bundles to be supplied
+    without disabling verification — necessary on systems whose trust store
+    no longer includes the DigiCert Global Root CA (removed from
+    Mozilla/Linux ca-certificates on 2026-04-15) while rheem.clearblade.com
+    still chains to that root.
+    """
+    return ssl.create_default_context()
 
 
 _SSL_CONTEXT = _create_ssl_context()
