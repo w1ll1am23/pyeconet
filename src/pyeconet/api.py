@@ -80,10 +80,9 @@ CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
 
 def _create_ssl_context() -> ssl.SSLContext:
     """Create a SSL context for the MQTT connection."""
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.load_default_certs()
     context.load_verify_locations(cadata=CLEAR_BLADE_DIGICERT_DISTRUSTED_ROOT)
-    context.verify_mode = ssl.CERT_REQUIRED
     return context
 
 
