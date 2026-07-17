@@ -15,7 +15,7 @@ from pyeconet.equipment import Equipment, EquipmentType
 from pyeconet.equipment.water_heater import WaterHeater
 from pyeconet.equipment.thermostat import Thermostat
 
-from aiohttp import ClientSession, ClientTimeout
+import aiohttp
 from aiohttp.client_exceptions import ClientError
 import paho.mqtt.client as mqtt
 
@@ -33,11 +33,57 @@ _LOGGER = logging.getLogger(__name__)
 
 ApiType = TypeVar("ApiType", bound="EcoNetApiInterface")
 
+# Via https://knowledge.digicert.com/general-information/digicert-trusted-root-authority-certificates
+# DigiCert Global Root CA
+# Valid until: 10/Nov/2031
+# Serial #: 08:3B:E0:56:90:42:46:B1:A1:75:6A:C9:59:91:C7:4A
+# SHA1 Fingerprint: A8:98:5D:3A:65:E5:E5:C4:B2:D7:D6:6D:40:C6:DD:2F:B1:9C:54:36
+# SHA256 Fingerprint: 43:48:A0:E9:44:4C:78:CB:26:5E:05:8D:5E:89:44:B4:D8:4F:96:62:BD:26:DB:25:7F:89:34:A4:43:C7:01:61
+#
+# This root certificate was explicitly distrusted by Mozilla. Refer to these articles:
+# https://knowledge.digicert.com/general-information/digicert-root-and-intermediate-ca-certificate-updates-2023
+# https://wiki.mozilla.org/CA/Root_CA_Lifecycles#2026_Websites_Trust_Bit_Removals
+#
+# We know that the common Rheem IoT endpoint uses a certificate signed by this root certificate.
+# Because some environments rely on the Mozilla CA bundle, when they update to any version of the bundle newer
+# than April 15, 2026, they no longer trust the root certificate, and consequently no longer trust the downstream
+# certificate used with the endpoint. As a workaround, we can re-add the distrusted root certificate as trusted,
+# similar to what the Android application does. This essentially reverts the updated Mozilla CA bundle for this
+# one certificate, which solves the problem in those environments, without making those devices any less "secure"
+# than they were before. It also keeps the scope of the trust narrowly on the Rheem EcoNet integration instead of
+# asking users to change their OS's entire CA configuration.
+#
+# Ideally the next certificate renewal will use a new root and intermediate that do not have this trust issue.
+# If they do, this workaround can be reverted.
+CLEAR_BLADE_DIGICERT_DISTRUSTED_ROOT = """-----BEGIN CERTIFICATE-----
+MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh
+MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
+d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD
+QTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT
+MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j
+b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB
+CSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97
+nh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt
+43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P
+T19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4
+gdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO
+BgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR
+TLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw
+DQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr
+hMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg
+06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF
+PnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls
+YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk
+CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
+-----END CERTIFICATE-----"""
 
 def _create_ssl_context() -> ssl.SSLContext:
     """Create a SSL context for the MQTT connection."""
     context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_default_certs()
+    context.load_verify_locations(cadata=CLEAR_BLADE_DIGICERT_DISTRUSTED_ROOT)
+    context.verify_mode = ssl.CERT_REQUIRED
     return context
 
 
@@ -230,70 +276,64 @@ class EcoNetApiInterface:
         payload = {"resource": "friedrich"}
         # payload = {"location_only": False, "type": "com.econet.econetconsumerandroid", "version": "6.0.0-375-01b4870e"}
 
-        _session = ClientSession()
-        try:
-            async with _session.post(
-                    f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp", json=payload, headers=_headers
-            ) as resp:
-                if resp.status == 200:
-                    _json = await resp.json()
-                    _LOGGER.debug(json.dumps(_json, indent=2))
-                    if _json.get("success"):
-                        self._locations = _json["results"]["locations"]
-                        return self._locations
-                    else:
-                        raise InvalidResponseFormat()
+        async with aiohttp.request(
+                'POST',
+                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp",
+                ssl=_SSL_CONTEXT,
+                json=payload,
+                headers=_headers
+        ) as resp:
+            if resp.status == 200:
+                _json = await resp.json()
+                _LOGGER.debug(json.dumps(_json, indent=2))
+                if _json.get("success"):
+                    self._locations = _json["results"]["locations"]
+                    return self._locations
                 else:
-                    raise GenericHTTPError(resp.status)
-        except ClientError as err:
-            raise err
-        finally:
-            await _session.close()
+                    raise InvalidResponseFormat()
+            else:
+                raise GenericHTTPError(resp.status)
 
     async def get_dynamic_action(self, payload: Dict) -> Dict:
         _headers = HEADERS.copy()
         _headers["ClearBlade-UserToken"] = self._user_token
 
-        _session = ClientSession()
-        try:
-            async with _session.post(
-                    f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
-                    json=payload,
-                    headers=_headers,
-            ) as resp:
-                if resp.status == 200:
-                    _json = await resp.json()
-                    _LOGGER.debug(json.dumps(_json, indent=2))
-                    if _json.get("success"):
-                        return _json
+        async with aiohttp.request(
+                'POST',
+                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
+                ssl=_SSL_CONTEXT,
+                json=payload,
+                headers=_headers,
+        ) as resp:
+            if resp.status == 200:
+                _json = await resp.json()
+                _LOGGER.debug(json.dumps(_json, indent=2))
+                if _json.get("success"):
+                    return _json
 
-                    raise InvalidResponseFormat()
+                raise InvalidResponseFormat()
 
-                raise GenericHTTPError(resp.status)
-        except ClientError as err:
-            raise err
-        finally:
-            await _session.close()
+            raise GenericHTTPError(resp.status)
 
     async def _authenticate(self, payload: dict) -> None:
 
-        _session = ClientSession()
-        try:
-            async with _session.post(
-                    f"{REST_URL}/user/auth", json=payload, headers=HEADERS
-            ) as resp:
-                if resp.status == 200:
-                    _json = await resp.json()
-                    _LOGGER.debug(json.dumps(_json, indent=2))
-                    if _json.get("options")["success"]:
-                        self._user_token = _json.get("user_token")
-                        self._account_id = _json.get("options").get("account_id")
-                    else:
-                        raise InvalidCredentialsError(_json.get("options")["message"])
+        async with aiohttp.request(
+                'POST',
+                f"{REST_URL}/user/auth",
+                ssl=_SSL_CONTEXT,
+                json=payload,
+                headers=HEADERS
+        ) as resp:
+            if resp.status == 200:
+                _json = await resp.json()
+                _LOGGER.debug(json.dumps(_json, indent=2))
+                if _json.get("options")["success"]:
+                    self._user_token = _json.get("user_token")
+                    self._account_id = _json.get("options").get("account_id")
                 else:
-                    raise GenericHTTPError(resp.status)
-        finally:
-            await _session.close()
+                    raise InvalidCredentialsError(_json.get("options")["message"])
+            else:
+                raise GenericHTTPError(resp.status)
 
     def _on_connect(self, client, userdata, flags, rc):
         _LOGGER.debug(f"Connected with result code: {str(rc)}")
