@@ -101,12 +101,14 @@ class Equipment:
     @property
     def supports_away(self) -> bool:
         """Return if the user has enabled away mode functionality for this equipment."""
-        if "@AWAYCONFIG" in self._equipment_info:
-            return self._equipment_info.get("@AWAYCONFIG", False)
-        # Some units (e.g. certain water heaters) never send @AWAYCONFIG at all,
-        # even though they genuinely support and report away/vacation state via
-        # @AWAY. Fall back to treating @AWAY's presence as evidence of support.
-        return "@AWAY" in self._equipment_info
+        # Some units report @AWAYCONFIG as False in their full state snapshot
+        # (only sent once, on initial load, never in later incremental MQTT
+        # updates) even though they genuinely support and actively report
+        # away/vacation state via @AWAY. Trust real evidence of @AWAY support
+        # over a possibly-stale/inaccurate @AWAYCONFIG flag.
+        return bool(self._equipment_info.get("@AWAYCONFIG", False)) or (
+            "@AWAY" in self._equipment_info
+        )
 
     @property
     def away(self) -> bool:
