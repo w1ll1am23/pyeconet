@@ -116,6 +116,44 @@ class Equipment:
         return self._equipment_info.get("@AWAY", False)
 
     @property
+    def supports_schedule(self) -> bool:
+        """Return if this equipment reports a native schedule status at all."""
+        return "@SCHEDULESTATUS" in self._equipment_info
+
+    @property
+    def schedule_status(self) -> Union[str, None]:
+        """Return the human-readable native schedule status.
+
+        Observed values on a real Rheem heat pump water heater:
+        "Following Schedule" or "Schedule overridden".
+        """
+        return self._equipment_info.get("@SCHEDULESTATUS")
+
+    @property
+    def is_following_schedule(self) -> bool:
+        """Return True if the equipment is currently following its own native
+        schedule rather than a manually overridden/held mode."""
+        return self.schedule_status == "Following Schedule"
+
+    def resume_schedule(self):
+        """Cancel any manual mode override (including away/vacation mode) and
+        resume the equipment's own native schedule.
+
+        This is distinct from simply setting @AWAY to False: on real hardware,
+        setting @AWAY alone does not necessarily make the physical unit (or
+        the app) stop treating the unit as being in an overridden/vacation
+        state - the app's own "exit vacation" action was observed to also
+        send @SCHEDULERESUME, which is what actually resumes the schedule and
+        lets the unit pick its own current scheduled mode.
+        """
+        if self.supports_schedule:
+            self._api.publish(
+                {"@SCHEDULERESUME": "resume"}, self.device_id, self.serial_number
+            )
+        else:
+            _LOGGER.error("Unit doesn't support schedule resume")
+
+    @property
     def connected(self) -> bool:
         """Return if the equipment is connected or not"""
         return self._equipment_info.get("@CONNECTED", True)
