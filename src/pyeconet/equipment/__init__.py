@@ -41,6 +41,11 @@ class Equipment:
                     )
                     try:
                         if isinstance(value, Dict):
+                            if not isinstance(self._equipment_info.get(key), Dict):
+                                # First time this dict-valued field has been seen
+                                # for this equipment (e.g. @AWAY_MSG only appears
+                                # once away/vacation messaging becomes relevant).
+                                self._equipment_info[key] = {}
                             for _key, _value in value.items():
                                 self._equipment_info[key][_key] = _value
                                 _LOGGER.debug(
@@ -96,7 +101,12 @@ class Equipment:
     @property
     def supports_away(self) -> bool:
         """Return if the user has enabled away mode functionality for this equipment."""
-        return self._equipment_info.get("@AWAYCONFIG", False)
+        if "@AWAYCONFIG" in self._equipment_info:
+            return self._equipment_info.get("@AWAYCONFIG", False)
+        # Some units (e.g. certain water heaters) never send @AWAYCONFIG at all,
+        # even though they genuinely support and report away/vacation state via
+        # @AWAY. Fall back to treating @AWAY's presence as evidence of support.
+        return "@AWAY" in self._equipment_info
 
     @property
     def away(self) -> bool:
