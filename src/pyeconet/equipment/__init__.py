@@ -25,12 +25,36 @@ class Equipment:
         self._api = api_interface
         self._equipment_info = equipment_info
         self._update_callback = None
+        self._awaiting_resume_confirmation = False
 
     def set_update_callback(self, callback):
         self._update_callback = callback
 
     def update_equipment_info(self, update: dict):
         """Take a dictionary and update the stored _equipment_info based on the present dict fields"""
+        # Some real-world actions (observed: ending a genuine Away/Vacation
+        # event via @SCHEDULERESUME) don't apply immediately - the cloud
+        # instead sends back a confirmation dialog and waits for the exact
+        # same payload to be re-published before actually applying it. Only
+        # auto-accept this when it's confirming something *we* just asked
+        # for, not any dialog that happens to arrive.
+        dialog = update.get("dialog")
+        if dialog is not None:
+            if self._awaiting_resume_confirmation:
+                self._awaiting_resume_confirmation = False
+                message = dialog.get("message")
+                if message:
+                    _LOGGER.debug(
+                        "Confirming resume-schedule dialog: %s", message
+                    )
+                    self._api.publish(message, self.device_id, self.serial_number)
+            else:
+                _LOGGER.debug(
+                    "Received unexpected confirmation dialog, not auto-accepting: %s",
+                    dialog,
+                )
+            return
+
         # Make sure this update is for this device, should probably check this before sending updates however
         _set = False
         if update.get("device_name") == self.device_id:
@@ -145,8 +169,15 @@ class Equipment:
         state - the app's own "exit vacation" action was observed to also
         send @SCHEDULERESUME, which is what actually resumes the schedule and
         lets the unit pick its own current scheduled mode.
+
+        Ending a genuine away/vacation event specifically triggers a
+        confirmation dialog from the cloud rather than applying immediately
+        (observed message: "Continuing will end Away Event") - see the
+        "dialog" handling in update_equipment_info, which auto-confirms it
+        as long as it arrives while a resume_schedule() call is outstanding.
         """
         if self.supports_schedule:
+            self._awaiting_resume_confirmation = True
             self._api.publish(
                 {"@SCHEDULERESUME": "resume"}, self.device_id, self.serial_number
             )
