@@ -220,11 +220,18 @@ class WaterHeater(Equipment):
 
     @property
     def enabled(self) -> Union[bool, None]:
-        """Return the the water heater is enabled or not"""
-        if self._supports_modes():
-            return self.modes[self._equipment_info.get("@MODE")["value"]] != "OFF"
-        elif self._supports_on_off():
+        """Return if the water heater is enabled or not"""
+        if self._supports_on_off():
+            # @ENABLED is the authoritative on/off flag. Units exposing both it
+            # and @MODE (e.g. heatpumpWaterHeaterGen5) leave @MODE on the last
+            # heating mode when switched off, so @MODE alone can't see the off
+            # state.
             return self._equipment_info.get("@ENABLED")["value"] == 1
+        elif self._supports_modes():
+            return (
+                self.modes[self._equipment_info.get("@MODE")["value"]]
+                is not WaterHeaterOperationMode.OFF
+            )
         else:
             # Unit doesn't support on/off or modes
             return None
