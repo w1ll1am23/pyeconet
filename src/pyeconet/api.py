@@ -19,8 +19,8 @@ import aiohttp
 from aiohttp.client_exceptions import ClientError
 import paho.mqtt.client as mqtt
 
-HOST = "rheem.clearblade.com"
-REST_URL = f"https://{HOST}/api/v/1"
+DEFAULT_HOST = "rheemprod.rheemconnect.com"
+REST_PATH = "/api/v/1"
 CLEAR_BLADE_SYSTEM_KEY = "e2e699cb0bb0bbb88fc8858cb5a401"
 CLEAR_BLADE_SYSTEM_SECRET = "E2E699CB0BE6C6FADDB1B0BC9A20"
 HEADERS = {
@@ -95,7 +95,12 @@ class EcoNetApiInterface:
     """
 
     def __init__(
-            self, email: str, password: str, account_id: str = None, user_token: str = None
+            self,
+            email: str,
+            password: str,
+            account_id: str = None,
+            user_token: str = None,
+            host: str = DEFAULT_HOST
     ) -> None:
         """
         Create the EcoNet API interface object.
@@ -107,6 +112,8 @@ class EcoNetApiInterface:
         self.email: str = email
         self.password: str = password
         self._user_token: str = user_token
+        self._host: str = host
+        self._rest_url: str = f"https://{host}{REST_PATH}"
         self._account_id: str = account_id
         self._locations: List = []
         self._equipment: Dict = {}
@@ -191,7 +198,7 @@ class EcoNetApiInterface:
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_message = self._on_message
         self._mqtt_client.on_disconnect = self._on_disconnect
-        self._mqtt_client.connect_async(HOST, 1884, 60)
+        self._mqtt_client.connect_async(self._host, 1884, 60)
         self._mqtt_client.loop_start()
 
     def publish(self, payload: Dict, device_id: str, serial_number: str):
@@ -277,7 +284,7 @@ class EcoNetApiInterface:
 
         async with aiohttp.request(
                 'POST',
-                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp",
+                f"{self._rest_url}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp",
                 ssl=_SSL_CONTEXT,
                 json=payload,
                 headers=_headers
@@ -299,7 +306,7 @@ class EcoNetApiInterface:
 
         async with aiohttp.request(
                 'POST',
-                f"{REST_URL}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
+                f"{self._rest_url}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
                 ssl=_SSL_CONTEXT,
                 json=payload,
                 headers=_headers,
@@ -318,7 +325,7 @@ class EcoNetApiInterface:
 
         async with aiohttp.request(
                 'POST',
-                f"{REST_URL}/user/auth",
+                f"{self._rest_url}/user/auth",
                 ssl=_SSL_CONTEXT,
                 json=payload,
                 headers=HEADERS
