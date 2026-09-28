@@ -1,6 +1,5 @@
 from datetime import datetime
 import time
-import ssl
 import json
 from typing import Type, TypeVar, List, Dict, Optional
 import logging
@@ -19,7 +18,7 @@ import aiohttp
 from aiohttp.client_exceptions import ClientError
 import paho.mqtt.client as mqtt
 
-DEFAULT_HOST = "rheemprod.rheemconnect.com"
+DEFAULT_HOST = "rheem.rheemconnect.com"
 REST_PATH = "/api/v/1"
 CLEAR_BLADE_SYSTEM_KEY = "e2e699cb0bb0bbb88fc8858cb5a401"
 CLEAR_BLADE_SYSTEM_SECRET = "E2E699CB0BE6C6FADDB1B0BC9A20"
@@ -33,62 +32,6 @@ _LOGGER = logging.getLogger(__name__)
 
 ApiType = TypeVar("ApiType", bound="EcoNetApiInterface")
 
-# Via https://knowledge.digicert.com/general-information/digicert-trusted-root-authority-certificates
-# DigiCert Global Root CA
-# Valid until: 10/Nov/2031
-# Serial #: 08:3B:E0:56:90:42:46:B1:A1:75:6A:C9:59:91:C7:4A
-# SHA1 Fingerprint: A8:98:5D:3A:65:E5:E5:C4:B2:D7:D6:6D:40:C6:DD:2F:B1:9C:54:36
-# SHA256 Fingerprint: 43:48:A0:E9:44:4C:78:CB:26:5E:05:8D:5E:89:44:B4:D8:4F:96:62:BD:26:DB:25:7F:89:34:A4:43:C7:01:61
-#
-# This root certificate was explicitly distrusted by Mozilla. Refer to these articles:
-# https://knowledge.digicert.com/general-information/digicert-root-and-intermediate-ca-certificate-updates-2023
-# https://wiki.mozilla.org/CA/Root_CA_Lifecycles#2026_Websites_Trust_Bit_Removals
-#
-# We know that the common Rheem IoT endpoint uses a certificate signed by this root certificate.
-# Because some environments rely on the Mozilla CA bundle, when they update to any version of the bundle newer
-# than April 15, 2026, they no longer trust the root certificate, and consequently no longer trust the downstream
-# certificate used with the endpoint. As a workaround, we can re-add the distrusted root certificate as trusted,
-# similar to what the Android application does. This essentially reverts the updated Mozilla CA bundle for this
-# one certificate, which solves the problem in those environments, without making those devices any less "secure"
-# than they were before. It also keeps the scope of the trust narrowly on the Rheem EcoNet integration instead of
-# asking users to change their OS's entire CA configuration.
-#
-# Ideally the next certificate renewal will use a new root and intermediate that do not have this trust issue.
-# If they do, this workaround can be reverted.
-CLEAR_BLADE_DIGICERT_DISTRUSTED_ROOT = """-----BEGIN CERTIFICATE-----
-MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh
-MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
-d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD
-QTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT
-MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j
-b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG
-9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB
-CSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97
-nh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt
-43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P
-T19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4
-gdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO
-BgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR
-TLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw
-DQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr
-hMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg
-06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF
-PnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls
-YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk
-CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
------END CERTIFICATE-----"""
-
-def _create_ssl_context() -> ssl.SSLContext:
-    """Create a SSL context for the MQTT connection."""
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    context.load_default_certs()
-    context.load_verify_locations(cadata=CLEAR_BLADE_DIGICERT_DISTRUSTED_ROOT)
-    return context
-
-
-_SSL_CONTEXT = _create_ssl_context()
-
-
 class EcoNetApiInterface:
     """
     API interface object.
@@ -99,8 +42,7 @@ class EcoNetApiInterface:
             email: str,
             password: str,
             account_id: str = None,
-            user_token: str = None,
-            host: str = DEFAULT_HOST
+            user_token: str = None
     ) -> None:
         """
         Create the EcoNet API interface object.
@@ -112,8 +54,7 @@ class EcoNetApiInterface:
         self.email: str = email
         self.password: str = password
         self._user_token: str = user_token
-        self._host: str = host
-        self._rest_url: str = f"https://{host}{REST_PATH}"
+        self._rest_url: str = f"https://{DEFAULT_HOST}{REST_PATH}"
         self._account_id: str = account_id
         self._locations: List = []
         self._equipment: Dict = {}
@@ -192,13 +133,13 @@ class EcoNetApiInterface:
         )
         self._mqtt_client.enable_logger()
 
-        self._mqtt_client.tls_set_context(_SSL_CONTEXT)
+        self._mqtt_client.tls_set()
         self._mqtt_client.tls_insecure_set(False)
 
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_message = self._on_message
         self._mqtt_client.on_disconnect = self._on_disconnect
-        self._mqtt_client.connect_async(self._host, 1884, 60)
+        self._mqtt_client.connect_async(DEFAULT_HOST, 1884, 60)
         self._mqtt_client.loop_start()
 
     def publish(self, payload: Dict, device_id: str, serial_number: str):
@@ -285,7 +226,6 @@ class EcoNetApiInterface:
         async with aiohttp.request(
                 'POST',
                 f"{self._rest_url}/code/{CLEAR_BLADE_SYSTEM_KEY}/getUserDataForApp",
-                ssl=_SSL_CONTEXT,
                 json=payload,
                 headers=_headers
         ) as resp:
@@ -307,7 +247,6 @@ class EcoNetApiInterface:
         async with aiohttp.request(
                 'POST',
                 f"{self._rest_url}/code/{CLEAR_BLADE_SYSTEM_KEY}/dynamicAction",
-                ssl=_SSL_CONTEXT,
                 json=payload,
                 headers=_headers,
         ) as resp:
@@ -326,7 +265,6 @@ class EcoNetApiInterface:
         async with aiohttp.request(
                 'POST',
                 f"{self._rest_url}/user/auth",
-                ssl=_SSL_CONTEXT,
                 json=payload,
                 headers=HEADERS
         ) as resp:
