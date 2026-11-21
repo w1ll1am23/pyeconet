@@ -121,6 +121,9 @@ class EcoNetApiInterface:
             )
             return False
 
+        if self._mqtt_client is not None:
+            self.unsubscribe()
+
         self._mqtt_client = mqtt.Client(
             callback_api_version=mqtt.CallbackAPIVersion.VERSION1,
             client_id=self._get_client_id(),
@@ -158,7 +161,14 @@ class EcoNetApiInterface:
         )
 
     def unsubscribe(self) -> None:
-        self._mqtt_client.loop_stop()
+        """Disconnect and stop the MQTT client, if any."""
+        if self._mqtt_client is None:
+            return
+        try:
+            self._mqtt_client.disconnect()
+        finally:
+            self._mqtt_client.loop_stop()
+            self._mqtt_client = None
 
     def _get_client_id(self) -> str:
         time_string = str(time.time()).replace(".", "")[:13]
